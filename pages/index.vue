@@ -37,13 +37,13 @@
             </svg>
           </NuxtLink>
 
-          <a href="#preview" class="btn btn-secondary btn-lg hero-btn-secondary">
-            <span>Explore Interactive Preview</span>
+          <NuxtLink to="/pricing" class="btn btn-secondary btn-lg hero-btn-secondary">
+            <span>View Pricing & Plans</span>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="12" y1="5" x2="12" y2="19"></line>
               <polyline points="19 12 12 19 5 12"></polyline>
             </svg>
-          </a>
+          </NuxtLink>
         </div>
 
         <!-- Telemetry Proof Chips -->
@@ -386,6 +386,101 @@
       </div>
     </section>
 
+    <!-- Developer REST API Showcase -->
+    <section id="api" class="section api-preview-section">
+      <div class="container">
+        <div class="surface api-preview-card">
+          <div class="api-preview-left">
+            <span class="badge badge-ultra">ULTRA TIER EXCLUSIVE</span>
+            <h2 class="api-preview-title">Automate Bytecode Virtualization in CI/CD</h2>
+            <p class="api-preview-desc">
+              Wire Luavion directly into GitHub Actions, GitLab CI/CD, or automated Roblox release pipelines. Use Bearer API keys to compile scripts with 60 req/min dedicated throughput.
+            </p>
+            <div class="api-preview-actions">
+              <NuxtLink to="/docs/api" class="btn btn-accent btn-sm">
+                <span>Explore REST API Docs</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                  <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+              </NuxtLink>
+              <NuxtLink to="/pricing" class="btn btn-secondary btn-sm">
+                Ultra Pricing
+              </NuxtLink>
+            </div>
+          </div>
+          <div class="api-preview-right">
+            <div class="code-box-mini">
+              <div class="code-box-head">
+                <span class="lang-tag">BASH / CURL</span>
+                <span class="status-dot dot-emerald"></span>
+              </div>
+              <pre class="code-pre-mini"><code>curl -X POST https://luavion.com/api/v1/obfuscate \
+  -H "Authorization: Bearer lua_live_..." \
+  -H "Content-Type: application/json" \
+  -d '{"source": "...", "preset": "EXTREME"}'</code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pricing Preview Section -->
+    <section id="pricing" class="section pricing-preview-section">
+      <div class="container">
+        <div class="section-heading">
+          <div class="section-tag">
+            <span class="status-dot dot-cyan"></span>
+            <span>SUBSCRIPTION TIERS</span>
+          </div>
+          <h2 class="section-title">Transparent, Scalable Pricing</h2>
+          <p class="section-subtitle">
+            Choose the throughput and feature tier designed for your development scale.
+          </p>
+          <div class="currency-switch-wrap">
+            <span class="curr-label">CURRENCY:</span>
+            <div class="segmented-control">
+              <button class="seg-btn" :class="{ active: currency === 'USD' }" @click="currency = 'USD'">USD ($)</button>
+              <button class="seg-btn" :class="{ active: currency === 'IDR' }" @click="currency = 'IDR'">IDR (Rp)</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="pricing-preview-grid">
+          <div v-for="p in Object.values(plans)" :key="p.id" class="surface price-card" :class="{ 'card-featured': p.id === 'pro', 'card-ultra': p.id === 'ultra' }">
+            <div class="price-head">
+              <span class="plan-title">{{ p.name }}</span>
+              <span v-if="p.badge" class="badge" :class="p.id === 'pro' ? 'badge-cyan' : p.id === 'ultra' ? 'badge-ultra' : 'badge-subtle'">{{ p.badge }}</span>
+            </div>
+            <div class="price-amount-wrap">
+              <span class="price-amount">{{ formatPrice(p.priceUsd, p.priceIdr) }}</span>
+              <span class="price-period">/mo</span>
+            </div>
+            <ul class="plan-bullets">
+              <li><strong>{{ p.quotaMonthly.toLocaleString() }}</strong> obfuscations / mo</li>
+              <li>Up to <strong>{{ p.maxFileSizeLabel }}</strong> per file</li>
+              <li>Batch: {{ p.maxBatchFiles > 1 ? `Up to ${p.maxBatchFiles} files` : 'Single file' }}</li>
+              <li>API: {{ p.hasApiAccess ? 'Full REST API (Ultra)' : 'No API' }}</li>
+              <li>History: {{ p.historyRetentionDays > 0 ? `${p.historyRetentionDays} days cloud storage` : 'Ephemeral (None)' }}</li>
+            </ul>
+            <NuxtLink :to="p.id === 'free' ? '/app' : `/billing?upgrade=${p.id}`" class="btn btn-sm btn-block" :class="p.id === 'pro' ? 'btn-accent' : p.id === 'ultra' ? 'btn-ultra' : 'btn-secondary'">
+              {{ p.id === 'free' ? 'Start Free' : `Upgrade to ${p.name}` }}
+            </NuxtLink>
+          </div>
+        </div>
+
+        <div class="full-pricing-cta">
+          <NuxtLink to="/pricing" class="btn btn-secondary">
+            <span>View Full Feature Comparison Matrix & FAQ</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </NuxtLink>
+        </div>
+      </div>
+    </section>
+
     <!-- FAQ Accordion Section -->
     <section id="faq" class="section faq-section">
       <div class="container faq-container">
@@ -456,6 +551,9 @@
 
 <script setup>
 import { ref } from 'vue'
+import { usePlans } from '~/composables/usePlans'
+
+const { plans, currency, formatPrice } = usePlans()
 
 const openFaq = ref(0)
 const toggleFaq = (idx) => {
@@ -984,6 +1082,156 @@ const faqItems = [
   }
   .pillars-grid,
   .security-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* API Preview */
+.api-preview-card {
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  background: rgba(168, 85, 247, 0.05);
+  border-radius: var(--radius-md);
+  padding: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 36px;
+  flex-wrap: wrap;
+}
+
+.api-preview-left {
+  max-width: 500px;
+}
+
+.api-preview-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 12px 0 8px;
+}
+
+.api-preview-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.api-preview-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.code-box-mini {
+  background: #04060a;
+  border: 1px solid var(--border-regular);
+  border-radius: var(--radius-xs);
+  min-width: 320px;
+  max-width: 440px;
+  overflow: hidden;
+}
+
+.code-box-head {
+  background: var(--bg-surface-raised);
+  padding: 6px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.lang-tag {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.code-pre-mini {
+  padding: 14px;
+  font-size: 11px;
+  color: #e2e8f0;
+  line-height: 1.5;
+  overflow-x: auto;
+}
+
+/* Pricing Preview */
+.currency-switch-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.pricing-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-top: 36px;
+}
+
+.price-card {
+  border: 1px solid var(--border-regular);
+  border-radius: var(--radius-md);
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.price-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.plan-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.price-amount-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+
+.price-amount {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--accent-cyan);
+}
+
+.price-period {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.plan-bullets {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+  flex: 1;
+}
+
+.full-pricing-cta {
+  text-align: center;
+  margin-top: 32px;
+}
+
+@media (max-width: 1024px) {
+  .pricing-preview-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 600px) {
+  .pricing-preview-grid {
     grid-template-columns: 1fr;
   }
 }

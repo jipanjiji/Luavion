@@ -11,7 +11,10 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.117.1",
+    "jszip": "^3.10.2",
     "nuxt": "^3.15.4",
+    "stripe": "^22.6.2",
     "vue": "^3.5.13",
     "vue-router": "^4.5.0",
     "wasmoon": "^1.16.0"

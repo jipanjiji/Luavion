@@ -16,13 +16,22 @@
               v-for="p in presets" 
               :key="p.id"
               class="preset-pill-btn"
-              :class="{ 'active': selectedPreset === p.id }"
-              @click="selectedPreset = p.id"
-              :title="p.desc"
+              :class="{ 
+                'active': selectedPreset === p.id,
+                'locked': isPresetLocked(p.id)
+              }"
+              @click="handleSelectPreset(p)"
+              :title="isPresetLocked(p.id) ? `Locked on ${userPlan.toUpperCase()} plan. Click to unlock.` : p.desc"
             >
-              <span class="pill-name">{{ p.name }}</span>
-              <span v-if="p.badge" class="pill-sub" :class="p.id === 'BALANCED' ? 'sub-cyan' : 'sub-muted'">
-                {{ p.badge }}
+              <span class="pill-name">
+                <svg v-if="isPresetLocked(p.id)" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="lock-icon">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+                {{ p.name }}
+              </span>
+              <span v-if="p.badge" class="pill-sub" :class="p.id === 'BALANCED' ? 'sub-cyan' : isPresetLocked(p.id) ? 'sub-amber' : 'sub-muted'">
+                {{ isPresetLocked(p.id) ? 'Locked' : p.badge }}
               </span>
             </button>
           </div>
@@ -64,13 +73,45 @@
           <!-- Watermark Banner Switch -->
           <div class="config-group">
             <span class="toolbar-label">WATERMARK</span>
+            <div class="watermark-tag" title="PRD 6.1: Official watermark comment is embedded in all outputs">
+              <span class="status-dot dot-cyan"></span>
+              <span>INCLUDED</span>
+            </div>
+          </div>
+
+          <!-- Batch Obfuscator Modal Trigger -->
+          <div class="config-group">
+            <span class="toolbar-label">BATCH</span>
             <button 
-              class="toggle-btn"
-              :class="{ 'active': includeBanner }"
-              @click="includeBanner = !includeBanner"
-              :title="includeBanner ? 'Header comment banner included' : 'No header comments'"
+              class="btn-batch-trigger"
+              :class="{ 'batch-locked': !hasBatchAccess }"
+              @click="handleOpenBatch"
+              :title="hasBatchAccess ? `Batch compile up to ${userPlan === 'ultra' ? '100' : '10'} files` : 'Batch compilation requires Pro or Ultra'"
             >
-              {{ includeBanner ? 'Included' : 'Off' }}
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+              </svg>
+              <span>Batch ({{ userPlan === 'ultra' ? '100x' : userPlan === 'pro' ? '10x' : 'Pro' }})</span>
+              <svg v-if="!hasBatchAccess" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Custom Presets Trigger -->
+          <div class="config-group">
+            <span class="toolbar-label">SAVED PRESETS</span>
+            <button 
+              class="btn-batch-trigger"
+              @click="handleOpenCustomPresets"
+              title="Manage custom configurations"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+              </svg>
+              <span>Presets</span>
             </button>
           </div>
 
@@ -110,6 +151,17 @@
         @close="clearError"
       />
 
+      <!-- Quota / File Size Warning Banner -->
+      <div v-if="isFileSizeExceeded" class="file-size-warning surface-raised">
+        <span class="warn-icon">⚠️</span>
+        <span class="warn-msg">
+          Current script size ({{ (inputByteCount / 1024).toFixed(1) }} KB) exceeds your {{ userPlan.toUpperCase() }} plan limit of {{ userPlanConfig.maxFileSizeLabel }}.
+        </span>
+        <button class="btn btn-accent btn-xs" @click="promptUpgrade('pro', 'Upgrade to increase your maximum file size up to 1 MB (Pro) or 5 MB (Ultra).')">
+          Upgrade Capacity
+        </button>
+      </div>
+
       <!-- Dual Pane Studio Workspace -->
       <div class="editor-workspace">
         <!-- Left Pane: Source Input -->
@@ -126,7 +178,10 @@
                 <span class="status-dot dot-amber"></span>
                 <span class="pane-name">INPUT SOURCE</span>
               </div>
-              <span class="telemetry-tag">{{ inputLineCount }} lines • {{ inputByteCount }} bytes</span>
+              <span class="telemetry-tag" :class="{ 'tag-warn': isFileSizeExceeded }">
+                {{ inputLineCount }} lines • {{ inputByteCount }} bytes 
+                <span v-if="isFileSizeExceeded"> (Exceeds {{ userPlanConfig.maxFileSizeLabel }})</span>
+              </span>
             </div>
 
             <div class="pane-controls">
@@ -180,7 +235,7 @@
           <div class="pane-footer">
             <button 
               class="btn btn-accent btn-obfuscate" 
-              :disabled="!sourceCode.trim() || isObfuscating"
+              :disabled="!sourceCode.trim() || isObfuscating || isFileSizeExceeded"
               @click="runObfuscation"
             >
               <template v-if="isObfuscating">
@@ -221,127 +276,120 @@
                   <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                   <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                 </svg>
-                <span>{{ copied ? 'Copied!' : 'Copy Code' }}</span>
+                <span>{{ copied ? 'Copied!' : 'Copy' }}</span>
               </button>
 
-              <button class="btn btn-ghost btn-sm" @click="downloadOutput" title="Download protected .lua file">
+              <button class="btn btn-ghost btn-sm" @click="downloadOutput" title="Download protected file">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                   <polyline points="7 10 12 15 17 10"></polyline>
                   <line x1="12" y1="15" x2="12" y2="3"></line>
                 </svg>
-                <span>Download .lua</span>
+                <span>Download</span>
               </button>
             </div>
           </div>
 
           <!-- Code Output Area -->
           <div class="editor-body">
-            <!-- Notice: We do NOT clear outputCode while compiling! The past output stays visible! -->
+            <!-- Active Compilation Progress Overlay -->
+            <div v-if="isObfuscating" class="compiling-overlay">
+              <div class="compiling-box surface">
+                <div class="compiling-spinner-ring"></div>
+                <span class="compiling-title">Synthesizing Galois Register VM</span>
+                <span class="compiling-step-sub">{{ activeCompilationStep }}</span>
+                <div class="compiling-bar-track">
+                  <div class="compiling-bar-pulse"></div>
+                </div>
+              </div>
+            </div>
+
             <textarea
               v-model="outputCode"
               class="code-textarea output-textarea"
-              placeholder="-- The protected virtualized script will appear here once obfuscated."
-              spellcheck="false"
+              placeholder="-- The virtualized bytecode payload will appear here after obfuscation..."
               readonly
+              spellcheck="false"
             ></textarea>
-
-            <!-- Compiling Progress Banner / Overlay (shown ON TOP of previous output while compiling) -->
-            <transition name="fade">
-              <div v-if="isObfuscating" class="compiling-overlay">
-                <div class="compiling-status-card surface-raised">
-                  <div class="compiling-spinner-box">
-                    <span class="spinner"></span>
-                  </div>
-                  <div class="compiling-info">
-                    <span class="compiling-title">Synthesizing Register VM</span>
-                    <span class="compiling-sub">
-                      Preserving past output • Compiling new seed ({{ elapsedTime }}s)...
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </transition>
-
-            <!-- Empty State (Only shown if NO output code exists and NOT compiling) -->
-            <div v-if="!outputCode && !isObfuscating" class="empty-state">
-              <div class="empty-icon-box">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                  <line x1="3" y1="9" x2="21" y2="9"></line>
-                  <line x1="9" y1="21" x2="9" y2="9"></line>
-                </svg>
-              </div>
-              <span class="empty-heading">Ready to Virtualize</span>
-              <p class="empty-sub">
-                Select your security preset above and click "Obfuscate Script" to compile into a decentralized register VM.
-              </p>
-            </div>
           </div>
 
-          <!-- Telemetry Metrics Bar Footer -->
+          <!-- Output Telemetry Footer -->
           <div class="pane-footer output-footer">
-            <div v-if="executionStats" class="metrics-row">
-              <div class="metric-pill">
-                <span class="pill-lbl">LATENCY</span>
-                <span class="pill-val val-cyan">{{ executionStats.durationMs }}ms</span>
+            <div class="footer-telemetry" v-if="executionStats">
+              <div class="telemetry-chip">
+                <span class="chip-label">EXPANSION</span>
+                <span class="chip-val">{{ executionStats.expansionRatio }}x</span>
               </div>
-              <div class="metric-pill">
-                <span class="pill-lbl">EXPANSION</span>
-                <span class="pill-val">{{ executionStats.expansionRatio }}x</span>
+              <div class="telemetry-chip">
+                <span class="chip-label">LATENCY</span>
+                <span class="chip-val">{{ executionStats.durationMs }}ms</span>
               </div>
-              <div class="metric-pill">
-                <span class="pill-lbl">PROFILE</span>
-                <span class="pill-val">{{ executionStats.preset }}</span>
-              </div>
-              <div class="metric-pill">
-                <span class="pill-lbl">SEED</span>
-                <span class="pill-val val-cyan">{{ executionStats.seed }}</span>
+              <div class="telemetry-chip">
+                <span class="chip-label">SEED</span>
+                <span class="chip-val">{{ executionStats.seed }}</span>
               </div>
             </div>
-            <div v-else class="metrics-row text-muted">
-              <span>Ready for compiler job</span>
+            <div v-else class="footer-telemetry-placeholder">
+              <span>Ready for compilation</span>
             </div>
+
+            <button 
+              v-if="pipelineLogs.length" 
+              class="btn btn-ghost btn-xs logs-toggle"
+              @click="showLogs = !showLogs"
+            >
+              <span>{{ showLogs ? 'Hide Logs' : `Logs (${pipelineLogs.length})` }}</span>
+            </button>
           </div>
         </div>
       </div>
 
-      <!-- Pipeline Compiler Trace Drawer -->
-      <div v-if="pipelineLogs.length" class="surface pipeline-drawer">
-        <div class="drawer-header" @click="showLogs = !showLogs">
-          <div class="drawer-title-group">
-            <span class="badge badge-cyan">Pipeline Telemetry</span>
-            <span class="drawer-summary">{{ pipelineLogs.length }} compiler passes recorded</span>
-          </div>
-          <button class="btn btn-ghost btn-sm">
-            <span>{{ showLogs ? 'Collapse Trace' : 'Expand Trace' }}</span>
-          </button>
+      <!-- Pipeline Logs Drawer -->
+      <div v-if="showLogs && pipelineLogs.length" class="surface logs-drawer">
+        <div class="logs-header">
+          <span class="logs-title">COMPILER PIPELINE EXECUTION LOGS</span>
+          <button class="btn btn-ghost btn-xs" @click="showLogs = false">Close</button>
         </div>
-
-        <div v-show="showLogs" class="drawer-content">
-          <div v-for="(log, i) in pipelineLogs" :key="i" class="log-row">
-            <span class="log-index">{{ String(i + 1).padStart(2, '0') }}</span>
-            <span class="log-pass">PASS</span>
-            <span class="log-text">{{ log.message }}</span>
+        <div class="logs-body">
+          <div 
+            v-for="(log, i) in pipelineLogs" 
+            :key="i"
+            class="log-line"
+            :class="`log-${log.level || 'info'}`"
+          >
+            <span class="log-level">[{{ (log.level || 'info').toUpperCase() }}]</span>
+            <span class="log-msg">{{ log.message }}</span>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Toast Notification -->
-    <div class="toast-container" v-if="toastMessage">
-      <div class="toast">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" color="#10b981">
-          <polyline points="20 6 9 17 4 12"></polyline>
-        </svg>
-        <span>{{ toastMessage }}</span>
-      </div>
+      <!-- Batch Obfuscator Modal Component -->
+      <BatchObfuscatorModal v-model="showBatchModal" />
+
+      <!-- Custom Presets Modal Component -->
+      <CustomPresetModal 
+        v-model="showCustomPresetsModal"
+        :current-settings="{
+          preset: selectedPreset,
+          luaVersion,
+          includeBanner
+        }"
+        @apply="onApplyCustomPreset"
+      />
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useUser } from '~/composables/useUser'
+import { usePlans } from '~/composables/usePlans'
+
+const { user, promptUpgrade, showToast } = useUser()
+const { getPlan } = usePlans()
+
+const userPlan = computed(() => user.value?.plan || 'free')
+const userPlanConfig = computed(() => getPlan(userPlan.value))
 
 const sourceCode = ref('')
 const outputCode = ref('')
@@ -362,8 +410,11 @@ const showLogs = ref(false)
 
 const isDragging = ref(false)
 const copied = ref(false)
-const toastMessage = ref('')
 const seedJustRefreshed = ref(false)
+
+const showBatchModal = ref(false)
+const showCustomPresetsModal = ref(false)
+const activeCompilationStep = ref('Parsing Abstract Syntax Tree...')
 
 const presets = [
   { 
@@ -372,6 +423,7 @@ const presets = [
     badge: 'Recommended', 
     security: 'High',
     vmProfile: 'STRONG',
+    minPlan: 'free',
     desc: 'Strong Register VM with Roblox geometric math attestation & MBA expressions.' 
   },
   { 
@@ -380,6 +432,7 @@ const presets = [
     badge: 'Max Defense', 
     security: 'Military-Grade',
     vmProfile: 'EXTREME',
+    minPlan: 'pro',
     desc: 'Dynamic Galois opcode dispatching, dead code injection & strict float verification.' 
   },
   { 
@@ -388,6 +441,7 @@ const presets = [
     badge: 'Anti-Tamper', 
     security: 'Very High',
     vmProfile: 'HARD',
+    minPlan: 'plus',
     desc: 'API reflection hashing, anti-proxy probes, and hardened register VM.' 
   },
   { 
@@ -396,6 +450,7 @@ const presets = [
     badge: 'High FPS', 
     security: 'Standard',
     vmProfile: 'PERFORMANCE',
+    minPlan: 'free',
     desc: 'Low overhead for high-frequency physics/render loops.' 
   },
   { 
@@ -404,6 +459,7 @@ const presets = [
     badge: 'Universal', 
     security: 'Safe',
     vmProfile: 'SAFE',
+    minPlan: 'free',
     desc: 'Broadest compatibility across legacy Lua 5.1 and all executors.' 
   },
   { 
@@ -412,6 +468,7 @@ const presets = [
     badge: 'Raw AST', 
     security: 'None',
     vmProfile: 'NONE',
+    minPlan: 'free',
     desc: 'Compression and variable mangling only, without virtualization.' 
   }
 ]
@@ -424,7 +481,52 @@ const inputByteCount = computed(() => new TextEncoder().encode(sourceCode.value)
 const outputLineCount = computed(() => outputCode.value ? outputCode.value.split('\n').length : 0)
 const outputByteCount = computed(() => new TextEncoder().encode(outputCode.value).length)
 
-// Randomize seed function
+const isPresetLocked = (presetId) => {
+  if (userPlan.value === 'ultra' || userPlan.value === 'pro') return false
+  if (userPlan.value === 'plus') return presetId === 'EXTREME'
+  // Free tier
+  return presetId === 'HARD' || presetId === 'EXTREME'
+}
+
+const hasBatchAccess = computed(() => {
+  return userPlan.value === 'pro' || userPlan.value === 'ultra'
+})
+
+const isFileSizeExceeded = computed(() => {
+  return inputByteCount.value > userPlanConfig.value.maxFileSizeBytes
+})
+
+const handleSelectPreset = (p) => {
+  if (isPresetLocked(p.id)) {
+    const requiredTier = p.minPlan || 'pro'
+    promptUpgrade(requiredTier, `The '${p.name}' preset requires a ${requiredTier.toUpperCase()} subscription. Upgrade to unlock ${p.desc}`)
+    return
+  }
+  selectedPreset.value = p.id
+}
+
+const handleOpenBatch = () => {
+  if (!hasBatchAccess.value) {
+    promptUpgrade('pro', 'Batch obfuscation (up to 10 files on Pro, 100 on Ultra) is a Pro/Ultra exclusive feature. Upgrade to compile entire project folders at once.')
+    return
+  }
+  showBatchModal.value = true
+}
+
+const handleOpenCustomPresets = () => {
+  if (userPlan.value === 'free' || userPlan.value === 'plus') {
+    promptUpgrade('pro', 'Saving and reusing custom compiler configurations is available on Pro (up to 3 presets) and Ultra (unlimited).')
+    return
+  }
+  showCustomPresetsModal.value = true
+}
+
+const onApplyCustomPreset = (p) => {
+  selectedPreset.value = p.base_preset || 'BALANCED'
+  luaVersion.value = p.lua_version || 'LuaU'
+  includeBanner.value = p.include_banner !== false
+}
+
 const randomizeSeed = () => {
   seed.value = Math.floor(Math.random() * 9000000) + 100000
   seedJustRefreshed.value = true
@@ -498,21 +600,33 @@ const readFile = (file) => {
   reader.readAsText(file)
 }
 
-/* ==========================================================================
-   runObfuscation:
-   1. DO NOT CLEAR PAST OUTPUT while compiling! Past output stays visible.
-   2. Replace outputCode ONLY after new compilation finishes.
-   3. Auto-refresh seed on every completion so consecutive runs are distinct!
-   ========================================================================== */
 const runObfuscation = async () => {
   if (!sourceCode.value.trim() || isObfuscating.value) return
+
+  if (isFileSizeExceeded.value) {
+    promptUpgrade('pro', `Your script size (${(inputByteCount.value / 1024).toFixed(1)} KB) exceeds the ${userPlanConfig.value.maxFileSizeLabel} limit for ${userPlan.value.toUpperCase()}. Upgrade to compile larger scripts.`)
+    return
+  }
 
   isObfuscating.value = true
   errorMessage.value = ''
   syntaxError.value = null
-  // Notice: We intentionally do NOT do `outputCode.value = ''` here!
-  // The past output stays intact while compiling.
   elapsedTime.value = 0
+
+  // Cycling status messages
+  const steps = [
+    'Parsing Luau Abstract Syntax Tree...',
+    'Synthesizing Mixed Boolean-Arithmetic (MBA)...',
+    'Generating Decentralized Galois Micro-Ops...',
+    'Binding Roblox Vector3 Geometric Attestation...',
+    'Injecting Steganographic AI Prompt Shield...'
+  ]
+  let stepIdx = 0
+  activeCompilationStep.value = steps[0]
+  const stepTimer = setInterval(() => {
+    stepIdx = (stepIdx + 1) % steps.length
+    activeCompilationStep.value = steps[stepIdx]
+  }, 450)
 
   const startClock = Date.now()
   timerId = setInterval(() => {
@@ -532,26 +646,23 @@ const runObfuscation = async () => {
     })
 
     if (res.ok) {
-      // Compilation finished: replace output with newly compiled bytecode
       outputCode.value = res.output
       executionStats.value = res.stats
       pipelineLogs.value = res.logs || []
       errorMessage.value = ''
       syntaxError.value = null
       showToast('Obfuscation complete!')
-
-      // MANDATED: Auto refresh seed on completion so next output is different!
       randomizeSeed()
     } else {
       errorMessage.value = res.error || 'Failed to obfuscate script.'
       syntaxError.value = res.syntaxError || null
-      // Past output remains untouched so user does not lose their previous code!
     }
   } catch (err) {
     errorMessage.value = err?.data?.error || err?.data?.statusMessage || err?.message || 'Server error during obfuscation.'
     syntaxError.value = err?.data?.syntaxError || null
   } finally {
     clearInterval(timerId)
+    clearInterval(stepTimer)
     isObfuscating.value = false
   }
 }
@@ -576,10 +687,12 @@ const downloadOutput = () => {
   showToast('Downloaded .lua file')
 }
 
-const showToast = (msg) => {
-  toastMessage.value = msg
-  setTimeout(() => { toastMessage.value = '' }, 2500)
-}
+useHead({
+  title: 'Luavion Obfuscator Studio | Next-Gen Luau Bytecode Virtualization',
+  meta: [
+    { name: 'description', content: 'Advanced Luau and Lua 5.1 bytecode virtualization with decentralized register VMs, geometric math attestation, and polymorphic execution flow.' }
+  ]
+})
 
 onMounted(() => {
   loadSampleScript()
@@ -599,28 +712,28 @@ onMounted(() => {
 
 /* Config Toolbar */
 .studio-toolbar {
+  border: 1px solid var(--border-regular);
+  border-radius: var(--radius-md);
   padding: 16px 20px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  flex-wrap: wrap;
-  background: var(--bg-surface-raised);
+  flex-direction: column;
+  gap: 16px;
+  background: var(--bg-surface);
 }
 
 .toolbar-section {
   display: flex;
   align-items: center;
-  gap: 16px;
   flex-wrap: wrap;
+  gap: 20px;
 }
 
 .toolbar-presets {
+  display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 8px;
-  flex: 1;
-  min-width: 320px;
+  gap: 10px;
+  width: 100%;
 }
 
 .toolbar-label-group {
@@ -637,240 +750,205 @@ onMounted(() => {
 }
 
 .preset-meta-info {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--accent-cyan);
-  font-weight: 600;
 }
 
 .preset-pills-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
 .preset-pill-btn {
-  font-family: var(--font-mono);
+  background: var(--bg-surface-raised);
+  border: 1px solid var(--border-regular);
+  padding: 6px 12px;
+  border-radius: var(--radius-xs);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
-  border-radius: var(--radius-sm);
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  color: var(--text-secondary);
-  font-size: 11px;
-  font-weight: 500;
-  cursor: pointer;
   transition: all var(--duration-fast);
 }
-
 .preset-pill-btn:hover {
   border-color: var(--border-hover);
-  color: #ffffff;
 }
-
 .preset-pill-btn.active {
   background: var(--bg-elevated);
-  border-color: var(--accent-cyan-border);
-  color: var(--accent-cyan);
-  box-shadow: 0 0 14px rgba(0, 240, 255, 0.15);
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 16px rgba(0, 240, 255, 0.15);
+}
+
+.preset-pill-btn.locked {
+  opacity: 0.7;
+}
+
+.lock-icon {
+  color: var(--status-amber);
 }
 
 .pill-sub {
   font-size: 9px;
-  font-weight: 600;
-  padding: 1px 5px;
-  border-radius: 3px;
-  text-transform: uppercase;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 2px;
 }
-
-.sub-cyan {
-  background: var(--accent-cyan-dim);
-  color: var(--accent-cyan);
-}
-
-.sub-muted {
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--text-muted);
-}
+.sub-cyan { background: rgba(0, 240, 255, 0.15); color: var(--accent-cyan); }
+.sub-amber { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+.sub-muted { background: rgba(255, 255, 255, 0.06); color: var(--text-muted); }
 
 .toolbar-divider {
-  width: 1px;
-  height: 48px;
+  height: 1px;
   background: var(--border-subtle);
+  width: 100%;
 }
 
 .toolbar-options {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 24px;
+  flex-wrap: wrap;
 }
 
 .config-group {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  align-items: center;
+  gap: 10px;
 }
 
-/* Segmented Control */
-.segmented-control {
-  display: flex;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm);
-  padding: 2px;
-}
-
-.seg-btn {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 500;
-  padding: 4px 10px;
-  border-radius: var(--radius-xs);
-  background: transparent;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all var(--duration-fast);
-}
-
-.seg-btn.active {
-  background: var(--bg-elevated);
-  color: #ffffff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-}
-
-/* Shield Status */
-.shield-indicator {
+.shield-indicator,
+.watermark-tag {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 10px;
-  border-radius: var(--radius-sm);
-  background: var(--bg-surface);
-  border: 1px solid var(--status-emerald-border);
+  background: var(--bg-surface-raised);
+  border: 1px solid var(--border-subtle);
+  padding: 4px 8px;
+  border-radius: var(--radius-xs);
   font-size: 10px;
   font-weight: 600;
-  color: var(--status-emerald);
 }
 
-/* Toggle Button */
-.toggle-btn {
-  font-family: var(--font-mono);
+.btn-batch-trigger {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-surface-raised);
+  border: 1px solid var(--border-regular);
+  color: var(--text-primary);
+  font-family: inherit;
   font-size: 11px;
-  padding: 5px 12px;
-  border-radius: var(--radius-sm);
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  color: var(--text-secondary);
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--radius-xs);
   cursor: pointer;
   transition: all var(--duration-fast);
 }
-
-.toggle-btn.active {
-  background: var(--bg-elevated);
-  border-color: var(--accent-cyan-border);
-  color: var(--accent-cyan);
+.btn-batch-trigger:hover {
+  border-color: var(--accent-cyan);
+}
+.btn-batch-trigger.batch-locked {
+  color: var(--text-secondary);
 }
 
-/* Seed Input Group with Auto-Refresh visual */
+/* Seed Input */
 .seed-label-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 6px;
 }
 
 .seed-refreshed-badge {
   font-size: 9px;
+  color: var(--status-emerald);
   font-weight: 700;
-  color: var(--accent-cyan);
-  animation: flashIn 300ms var(--ease-spring);
-}
-
-@keyframes flashIn {
-  from { opacity: 0; transform: scale(0.9); }
-  to { opacity: 1; transform: scale(1); }
 }
 
 .seed-control {
   display: flex;
   align-items: center;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm);
-  padding: 2px 4px;
-  transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
-}
-
-.seed-control.refreshed-glow {
-  border-color: var(--accent-cyan);
-  box-shadow: 0 0 14px rgba(0, 240, 255, 0.35);
+  background: var(--bg-surface-raised);
+  border: 1px solid var(--border-regular);
+  border-radius: var(--radius-xs);
+  overflow: hidden;
 }
 
 .seed-input {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: #ffffff;
+  width: 75px;
   background: transparent;
   border: none;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 11px;
+  padding: 4px 8px;
+}
+.seed-input:focus {
   outline: none;
-  width: 90px;
-  padding: 3px 6px;
 }
 
 .seed-refresh-btn {
   background: transparent;
   border: none;
-  color: var(--text-secondary);
+  border-left: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  padding: 4px 6px;
   cursor: pointer;
-  padding: 4px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  border-radius: 3px;
 }
-
 .seed-refresh-btn:hover {
-  color: var(--accent-cyan);
-  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
 }
 
-/* Editor Workspace Grid */
-.editor-workspace {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-
-.editor-card {
-  display: flex;
-  flex-direction: column;
-  height: 600px;
-  overflow: hidden;
-  border-radius: var(--radius-md);
-  position: relative;
-  transition: border-color var(--duration-fast);
-}
-
-.editor-card.drag-over {
-  border-color: var(--accent-cyan);
-  box-shadow: 0 0 24px rgba(0, 240, 255, 0.25);
-}
-
-.editor-card.compiling-active {
-  border-color: rgba(0, 240, 255, 0.3);
-}
-
-/* Pane Header */
-.pane-header {
+/* File Size Warning */
+.file-size-warning {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 10px 16px;
-  background: var(--bg-surface-raised);
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: #fbbf24;
+}
+
+.warn-msg {
+  flex: 1;
+  margin: 0 12px;
+}
+
+/* Editor Workspace */
+.editor-workspace {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  min-height: 580px;
+}
+
+.editor-card {
+  border: 1px solid var(--border-regular);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-surface);
+  position: relative;
+  overflow: hidden;
+}
+
+.pane-header {
+  padding: 12px 16px;
   border-bottom: 1px solid var(--border-subtle);
-  gap: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg-surface-raised);
 }
 
 .pane-meta {
@@ -883,15 +961,21 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+.pane-name {
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   color: #ffffff;
 }
 
 .telemetry-tag {
   font-size: 10px;
   color: var(--text-muted);
+}
+.tag-warn {
+  color: var(--status-amber);
 }
 
 .pane-controls {
@@ -904,294 +988,229 @@ onMounted(() => {
   cursor: pointer;
 }
 
-/* Editor Body & Textareas */
 .editor-body {
   flex: 1;
   position: relative;
   display: flex;
-  overflow: hidden;
-  background: var(--bg-base);
+  min-height: 480px;
 }
 
 .code-textarea {
-  flex: 1;
   width: 100%;
   height: 100%;
-  padding: 16px;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  line-height: 1.65;
-  color: var(--text-primary);
   background: transparent;
   border: none;
-  outline: none;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  padding: 16px;
   resize: none;
+  outline: none;
   white-space: pre;
   tab-size: 2;
-  overflow: auto;
 }
 
 .output-textarea {
-  color: #93c5fd;
+  color: #cffafe;
 }
 
-/* Drag & Drop Overlay */
 .drag-drop-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(5, 8, 14, 0.85);
-  backdrop-filter: blur(4px);
+  background: rgba(5, 8, 14, 0.9);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 20;
 }
 
 .drag-drop-card {
-  padding: 24px 32px;
+  padding: 32px;
   border-radius: var(--radius-md);
-  border: 1px dashed var(--accent-cyan);
+  border: 2px dashed var(--accent-cyan);
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 12px;
 }
 
-.drop-text {
-  font-size: 13px;
-  font-weight: 600;
-  color: #ffffff;
-}
-
-/* Compiling Status Overlay (Keeps past output visible underneath) */
+/* Compiling Progress Overlay */
 .compiling-overlay {
   position: absolute;
-  top: 14px;
-  right: 14px;
+  inset: 0;
+  background: rgba(5, 8, 14, 0.88);
+  backdrop-filter: blur(8px);
   z-index: 10;
-  pointer-events: none;
-}
-
-.compiling-status-card {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 16px;
-  border-radius: var(--radius-sm);
-  background: rgba(14, 20, 34, 0.95);
-  border: 1px solid var(--accent-cyan-border);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 16px rgba(0, 240, 255, 0.2);
-  backdrop-filter: blur(12px);
-  animation: slideIn 200ms var(--ease-spring);
+  justify-content: center;
+  padding: 20px;
 }
 
-@keyframes slideIn {
-  from { opacity: 0; transform: translateY(-8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.compiling-spinner-box {
-  color: var(--accent-cyan);
-}
-
-.compiling-info {
+.compiling-box {
+  width: 100%;
+  max-width: 380px;
+  background: var(--bg-surface-raised);
+  border: 1px solid var(--border-regular);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  text-align: center;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+}
+
+.compiling-spinner-ring {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(0, 240, 255, 0.15);
+  border-top-color: var(--accent-cyan);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 14px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .compiling-title {
-  font-size: 11px;
-  font-weight: 700;
-  color: #ffffff;
-}
-
-.compiling-sub {
-  font-size: 10px;
-  color: var(--text-secondary);
-}
-
-/* Empty State */
-.empty-state {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 32px;
-  text-align: center;
-  pointer-events: none;
-}
-
-.empty-icon-box {
-  width: 52px;
-  height: 52px;
-  border-radius: var(--radius-md);
-  background: var(--bg-surface-raised);
-  border: 1px solid var(--border-subtle);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-faint);
-}
-
-.empty-heading {
   font-size: 14px;
   font-weight: 700;
   color: #ffffff;
+  margin-bottom: 6px;
 }
 
-.empty-sub {
-  font-size: 12px;
-  color: var(--text-muted);
-  max-width: 340px;
-  line-height: 1.5;
+.compiling-step-sub {
+  font-size: 11px;
+  color: var(--accent-cyan);
+  margin-bottom: 14px;
+  min-height: 16px;
 }
 
-/* Pane Footer */
+.compiling-bar-track {
+  width: 100%;
+  height: 4px;
+  background: var(--bg-base);
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+}
+
+.compiling-bar-pulse {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, #00f0ff, transparent);
+  animation: pulseBar 1.2s infinite ease-in-out;
+}
+
+@keyframes pulseBar {
+  0% { left: -40%; }
+  100% { left: 100%; }
+}
+
 .pane-footer {
+  padding: 12px 16px;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-surface-raised);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 16px;
-  background: var(--bg-surface-raised);
-  border-top: 1px solid var(--border-subtle);
 }
 
 .btn-obfuscate {
   width: 100%;
-  padding: 10px;
-  font-size: 13px;
-  font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
+  font-weight: 600;
 }
 
 .output-footer {
-  font-size: 11px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.metrics-row {
+.footer-telemetry {
   display: flex;
   align-items: center;
   gap: 16px;
-  flex-wrap: wrap;
 }
 
-.metric-pill {
+.telemetry-chip {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 6px;
 }
 
-.pill-lbl {
+.chip-label {
   font-size: 9px;
   font-weight: 700;
   color: var(--text-muted);
-  letter-spacing: 0.06em;
 }
 
-.pill-val {
-  font-size: 11px;
+.chip-val {
+  font-size: 12px;
   font-weight: 600;
-  color: #ffffff;
-}
-
-.val-cyan {
   color: var(--accent-cyan);
 }
 
-/* Pipeline Drawer */
-.pipeline-drawer {
-  overflow: hidden;
-  border-radius: var(--radius-md);
-}
-
-.drawer-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 18px;
-  background: var(--bg-surface-raised);
-  cursor: pointer;
-  transition: background var(--duration-fast);
-}
-
-.drawer-header:hover {
-  background: var(--bg-elevated);
-}
-
-.drawer-title-group {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.drawer-summary {
+.footer-telemetry-placeholder {
   font-size: 11px;
-  color: var(--text-secondary);
+  color: var(--text-muted);
 }
 
-.drawer-content {
-  padding: 14px 18px;
-  background: var(--bg-base);
-  border-top: 1px solid var(--border-subtle);
+/* Logs Drawer */
+.logs-drawer {
+  border: 1px solid var(--border-regular);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  background: #04060a;
+}
+
+.logs-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.logs-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.logs-body {
+  max-height: 180px;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  max-height: 240px;
-  overflow-y: auto;
+  gap: 4px;
 }
 
-.log-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.log-line {
   font-size: 11px;
-  font-family: var(--font-mono);
+  line-height: 1.5;
 }
+.log-info { color: #94a3b8; }
+.log-warn { color: #fbbf24; }
+.log-error { color: #f43f5e; }
 
-.log-index {
-  color: var(--text-faint);
-}
-
-.log-pass {
-  font-size: 9px;
+.log-level {
   font-weight: 700;
-  padding: 1px 5px;
-  border-radius: 3px;
-  background: var(--accent-cyan-dim);
-  color: var(--accent-cyan);
+  margin-right: 6px;
 }
 
-.log-text {
-  color: var(--text-secondary);
-}
-
-/* Transitions */
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 200ms var(--ease-spring);
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-
-@media (max-width: 960px) {
+@media (max-width: 900px) {
   .editor-workspace {
     grid-template-columns: 1fr;
-  }
-  .editor-card {
-    height: 480px;
-  }
-  .toolbar-divider {
-    display: none;
   }
 }
 </style>

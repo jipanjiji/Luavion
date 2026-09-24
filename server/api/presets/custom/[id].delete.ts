@@ -1,0 +1,33 @@
+import { requireAuth } from '../../../utils/auth'
+import { getSupabaseClient, mockDb } from '../../../utils/supabase'
+
+export default defineEventHandler(async (event) => {
+  const user = await requireAuth(event)
+  const id = getRouterParam(event, 'id')
+
+  if (!id) {
+    throw createError({ statusCode: 400, statusMessage: 'Preset ID is required' })
+  }
+
+  const supabase = getSupabaseClient()
+  if (supabase) {
+    const { error } = await supabase
+      .from('custom_presets')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', user.id)
+
+    if (error) {
+      throw createError({ statusCode: 500, statusMessage: error.message })
+    }
+
+    return { ok: true, message: 'Preset deleted successfully' }
+  }
+
+  const index = mockDb.presets.findIndex(p => p.id === id && p.user_id === user.id)
+  if (index !== -1) {
+    mockDb.presets.splice(index, 1)
+  }
+
+  return { ok: true, message: 'Preset deleted successfully' }
+})

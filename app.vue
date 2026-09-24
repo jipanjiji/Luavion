@@ -10,6 +10,12 @@
 
     <!-- Global Engineered Footer -->
     <AppFooter />
+
+    <!-- Global Plan Upgrade Modal -->
+    <PlanUpgradeModal />
+
+    <!-- Global Toast Notifications -->
+    <AppToast />
   </div>
 </template>
 
