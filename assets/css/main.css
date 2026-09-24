@@ -1,0 +1,449 @@
+/* ==========================================================================
+   LUAVION CYBER-CRYPTOGRAPHIC DESIGN SYSTEM
+   Typography: Geist Mono throughout (Strict Monospace Hierarchy)
+   Aesthetic: Linear / Vercel dark precision, high-assurance depth
+   ========================================================================== */
+
+:root {
+  /* Obsidian Layered Surfaces */
+  --bg-void: #05080e;
+  --bg-base: #080d16;
+  --bg-surface: #0e1422;
+  --bg-surface-raised: #121a2c;
+  --bg-elevated: #162035;
+  --bg-overlay: #1c2944;
+
+  /* Precision Borders & Micro-Highlights */
+  --border-faint: rgba(255, 255, 255, 0.04);
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-regular: rgba(255, 255, 255, 0.14);
+  --border-hover: rgba(255, 255, 255, 0.25);
+  --border-focus: #00f0ff;
+  --surface-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+
+  /* Typography Hierarchy */
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --text-faint: #475569;
+  --text-inverse: #05080e;
+
+  /* Signature Cyber Cyan Accent */
+  --accent-cyan: #00f0ff;
+  --accent-cyan-hover: #38f4ff;
+  --accent-cyan-dim: rgba(0, 240, 255, 0.09);
+  --accent-cyan-dimmer: rgba(0, 240, 255, 0.04);
+  --accent-cyan-glow: 0 0 24px rgba(0, 240, 255, 0.22);
+  --accent-cyan-border: rgba(0, 240, 255, 0.28);
+
+  /* Semantic Status Colors */
+  --status-emerald: #10b981;
+  --status-emerald-dim: rgba(16, 185, 129, 0.12);
+  --status-emerald-border: rgba(16, 185, 129, 0.3);
+
+  --status-amber: #f59e0b;
+  --status-amber-dim: rgba(245, 158, 11, 0.12);
+  --status-amber-border: rgba(245, 158, 11, 0.3);
+
+  --status-crimson: #f43f5e;
+  --status-crimson-dim: rgba(244, 63, 94, 0.12);
+  --status-crimson-border: rgba(244, 63, 94, 0.3);
+
+  /* Font System */
+  --font-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* Border Radii (Disciplined scale) */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-full: 9999px;
+
+  /* Elevation Shadows & Atmosphere */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.45);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 12px 36px rgba(0, 0, 0, 0.65);
+  --shadow-inset: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+
+  /* Smooth Natural Easing */
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 400ms;
+}
+
+/* Base Styles */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-family: var(--font-mono);
+  background-color: var(--bg-void);
+  color: var(--text-primary);
+  scroll-behavior: smooth;
+  font-feature-settings: "tnum" 1, "zero" 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  min-height: 100vh;
+  background-color: var(--bg-void);
+  background-image: 
+    radial-gradient(ellipse 90% 60% at 50% -10%, rgba(0, 240, 255, 0.05), transparent 75%),
+    radial-gradient(ellipse 60% 40% at 90% 80%, rgba(16, 185, 129, 0.02), transparent 70%);
+  font-size: 13px;
+  line-height: 1.6;
+  letter-spacing: -0.015em;
+  color: var(--text-primary);
+  overflow-x: hidden;
+}
+
+/* Custom Text Selection */
+::selection {
+  background: rgba(0, 240, 255, 0.25);
+  color: #ffffff;
+}
+
+/* Scrollbar Craft */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-void);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-xs);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
+
+/* Links */
+a {
+  color: inherit;
+  text-decoration: none;
+  transition: color var(--duration-fast) var(--ease-spring);
+}
+
+/* Accessible Focus Outlines */
+:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+/* Container */
+.container {
+  width: 100%;
+  max-width: 1260px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 0 16px;
+  }
+}
+
+/* Ambient Subtle Background Grid Pattern */
+.bg-grid-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-size: 32px 32px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  mask-image: radial-gradient(ellipse 60% 50% at 50% 30%, #000 70%, transparent 100%);
+}
+
+/* High-Assurance Machined Surface */
+.surface {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--surface-highlight), var(--shadow-sm);
+  border-radius: var(--radius-lg);
+  position: relative;
+  transition: border-color var(--duration-normal) var(--ease-spring), box-shadow var(--duration-normal) var(--ease-spring);
+}
+
+.surface:hover {
+  border-color: var(--border-regular);
+}
+
+.surface-raised {
+  background: var(--bg-surface-raised);
+  border: 1px solid var(--border-regular);
+  box-shadow: var(--surface-highlight), var(--shadow-md);
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-spring);
+  user-select: none;
+  white-space: nowrap;
+  outline: none;
+}
+
+.btn-primary {
+  background: #ffffff;
+  color: #05080e;
+  font-weight: 600;
+  border-color: #ffffff;
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.12);
+}
+
+.btn-primary:hover {
+  background: #f1f5f9;
+  border-color: #f1f5f9;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 20px rgba(255, 255, 255, 0.2);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-accent {
+  background: var(--accent-cyan);
+  color: #05080e;
+  font-weight: 600;
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.25);
+}
+
+.btn-accent:hover {
+  background: var(--accent-cyan-hover);
+  box-shadow: 0 0 28px rgba(0, 240, 255, 0.4);
+  transform: translateY(-1px);
+}
+
+.btn-accent:active {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  background: var(--bg-surface-raised);
+  color: var(--text-primary);
+  border-color: var(--border-subtle);
+  box-shadow: var(--surface-highlight);
+}
+
+.btn-secondary:hover {
+  background: var(--bg-elevated);
+  border-color: var(--border-regular);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.btn-ghost:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.btn-sm {
+  padding: 5px 10px;
+  font-size: 11px;
+}
+
+.btn-lg {
+  padding: 12px 24px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: var(--radius-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  box-shadow: var(--surface-highlight);
+}
+
+.badge-cyan {
+  background: var(--accent-cyan-dim);
+  color: var(--accent-cyan);
+  border-color: var(--accent-cyan-border);
+}
+
+.badge-emerald {
+  background: var(--status-emerald-dim);
+  color: var(--status-emerald);
+  border-color: var(--status-emerald-border);
+}
+
+.badge-amber {
+  background: var(--status-amber-dim);
+  color: var(--status-amber);
+  border-color: var(--status-amber-border);
+}
+
+.badge-crimson {
+  background: var(--status-crimson-dim);
+  color: var(--status-crimson);
+  border-color: var(--status-crimson-border);
+}
+
+/* Status Indicator Dots */
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dot-cyan {
+  background: var(--accent-cyan);
+  box-shadow: 0 0 8px var(--accent-cyan);
+}
+
+.dot-emerald {
+  background: var(--status-emerald);
+  box-shadow: 0 0 8px var(--status-emerald);
+}
+
+.dot-amber {
+  background: var(--status-amber);
+  box-shadow: 0 0 8px var(--status-amber);
+}
+
+.dot-crimson {
+  background: var(--status-crimson);
+  box-shadow: 0 0 8px var(--status-crimson);
+}
+
+/* Pulsing Status Dot */
+.pulse-indicator {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pulse-indicator .dot-core {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--status-emerald);
+}
+
+.pulse-indicator .dot-ring {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.4);
+  animation: pulse-ring 2s cubic-bezier(0.24, 0, 0.38, 1) infinite;
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.6); opacity: 0.8; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+/* Toast Container & Notification */
+.toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface-raised);
+  border: 1px solid var(--border-regular);
+  box-shadow: var(--shadow-lg), var(--surface-highlight);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 500;
+  animation: toastIn 200ms var(--ease-spring);
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Spinner Animation */
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Code Syntax Palette */
+.syntax-keyword { color: #f43f5e; font-weight: 600; }
+.syntax-func    { color: #38bdf8; }
+.syntax-str     { color: #34d399; }
+.syntax-comment { color: #64748b; font-style: italic; }
+.syntax-number  { color: #fbbf24; }
+.syntax-op      { color: #a78bfa; }
+.syntax-id      { color: #f8fafc; }
