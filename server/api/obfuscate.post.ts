@@ -78,8 +78,8 @@ export default defineEventHandler(async (event) => {
     const filename = String(body.filename || 'script.lua')
 
     // 1. Authenticate user and verify plan
-    const user = await getUser(event)
-    const userPlan = user ? user.plan : 'free'
+    const user = await requireAuth(event)
+    const userPlan = user.plan
     const planConfig = getPlanConfig(userPlan)
 
     // 2. Server-Side Enforcement: File size limit
@@ -151,31 +151,37 @@ export default defineEventHandler(async (event) => {
 
       // Update quota in database
       if (supabase) {
-        await supabase
-          .from('profiles')
-          .update({
-            quota_used_this_month: newUsed,
-            quota_topup_balance: newTopup
-          })
-          .eq('id', user.id)
+        try {
+          await supabase
+            .from('profiles')
+            .update({
+              quota_used_this_month: newUsed,
+              quota_topup_balance: newTopup
+            })
+            .eq('id', user.id)
 
-        // Save history if plan retention allows
-        if (planConfig.historyRetentionDays > 0) {
-          const expiresAt = new Date(Date.now() + planConfig.historyRetentionDays * 24 * 3600 * 1000).toISOString()
-          await supabase.from('obfuscation_history').insert({
-            user_id: user.id,
-            filename,
-            original_bytes: origBytes,
-            obfuscated_bytes: obfBytes,
-            expansion_ratio: ratio,
-            duration_ms: durationMs,
-            preset,
-            lua_version: luaVersion,
-            seed: result.seed,
-            status: 'completed',
-            obfuscated_code: result.output,
-            expires_at: expiresAt
-          })
+          // Save history if plan retention allows
+          if (planConfig.historyRetentionDays > 0) {
+            const expiresAt = new Date(Date.now() + planConfig.historyRetentionDays * 24 * 3600 * 1000).toISOString()
+            await supabase.from('obfuscation_history').insert({
+              user_id: user.id,
+              filename,
+              original_bytes: origBytes,
+              obfuscated_bytes: obfBytes,
+              expansion_ratio: ratio,
+              duration_ms: durationMs,
+              preset,
+              lua_version: luaVersion,
+              seed: result.seed,
+              status: 'completed',
+              obfuscated_code: result.output,
+              expires_at: expiresAt
+            })
+          }
+        } catch (e) {
+          console.warn('Could not record to Supabase DB, falling back to local memory store')
+          user.quota_used_this_month = newUsed
+          user.quota_topup_balance = newTopup
         }
       } else {
         // Mock DB store update

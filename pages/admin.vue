@@ -322,7 +322,7 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--status-crimson);
   letter-spacing: 0.08em;
   margin-bottom: 8px;
@@ -330,7 +330,7 @@ onMounted(() => {
 
 .admin-title {
   font-size: 26px;
-  font-weight: 700;
+  font-weight: 600;
   color: #ffffff;
   letter-spacing: -0.02em;
   margin-bottom: 6px;
@@ -373,7 +373,7 @@ onMounted(() => {
 
 .kpi-label {
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.06em;
   color: var(--text-muted);
   margin-bottom: 8px;
@@ -381,7 +381,7 @@ onMounted(() => {
 
 .kpi-val {
   font-size: 28px;
-  font-weight: 700;
+  font-weight: 600;
   color: #ffffff;
   margin-bottom: 6px;
 }
@@ -409,7 +409,7 @@ onMounted(() => {
 
 .dist-label {
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-muted);
   letter-spacing: 0.05em;
 }
@@ -452,7 +452,7 @@ onMounted(() => {
 
 .section-title {
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 600;
   color: #ffffff;
 }
 
@@ -502,7 +502,7 @@ onMounted(() => {
 .admin-table th {
   background: var(--bg-surface-raised);
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-muted);
   letter-spacing: 0.05em;
 }

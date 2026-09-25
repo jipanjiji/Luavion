@@ -1,6 +1,6 @@
 <template>
   <div class="billing-page">
-    <div class="container billing-container">
+    <div class="billing-container">
       <div class="billing-header">
         <div class="header-left">
           <div class="billing-tag">
@@ -214,6 +214,7 @@
 </template>
 
 <script setup>
+definePageMeta({ layout: 'dashboard' })
 import { ref, computed } from 'vue'
 import { useUser } from '~/composables/useUser'
 import { usePlans } from '~/composables/usePlans'
@@ -320,8 +321,9 @@ const executeCancelSubscription = async () => {
 
 <style scoped>
 .billing-page {
-  padding: 48px 0 96px;
-  min-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 
 .billing-header {
@@ -338,7 +340,7 @@ const executeCancelSubscription = async () => {
   align-items: center;
   gap: 8px;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--accent-cyan);
   letter-spacing: 0.08em;
   margin-bottom: 8px;
@@ -346,7 +348,7 @@ const executeCancelSubscription = async () => {
 
 .billing-title {
   font-size: 26px;
-  font-weight: 700;
+  font-weight: 600;
   color: #ffffff;
   letter-spacing: -0.02em;
   margin-bottom: 6px;
@@ -366,9 +368,40 @@ const executeCancelSubscription = async () => {
   border: 1px solid var(--border-regular);
 }
 
+.segmented-control {
+  display: inline-flex;
+  gap: 2px;
+  background: var(--bg-base);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+}
+
+.seg-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 500;
+  font-family: var(--font-mono);
+  padding: 6px 13px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+  min-height: 30px;
+}
+
+.seg-btn:hover { color: var(--text-secondary); }
+
+.seg-btn.active {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
 .curr-label {
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-muted);
 }
 
@@ -400,7 +433,7 @@ const executeCancelSubscription = async () => {
 
 .current-plan-name {
   font-size: 22px;
-  font-weight: 700;
+  font-weight: 600;
   color: #ffffff;
   margin-bottom: 6px;
 }
@@ -434,7 +467,7 @@ const executeCancelSubscription = async () => {
 
 .price-num {
   font-size: 32px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--accent-cyan);
 }
 
@@ -485,7 +518,7 @@ const executeCancelSubscription = async () => {
 
 .badge-val {
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--status-emerald);
 }
 
@@ -515,7 +548,7 @@ const executeCancelSubscription = async () => {
 .pack-count {
   display: block;
   font-size: 24px;
-  font-weight: 700;
+  font-weight: 600;
   color: #ffffff;
 }
 
@@ -528,7 +561,7 @@ const executeCancelSubscription = async () => {
 
 .pack-price-tag {
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--accent-cyan);
   margin-bottom: 16px;
 }
@@ -570,13 +603,13 @@ const executeCancelSubscription = async () => {
 
 .tier-title {
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 600;
   color: #ffffff;
 }
 
 .tier-price {
   font-size: 15px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-primary);
 }
 
@@ -626,7 +659,7 @@ const executeCancelSubscription = async () => {
 .invoices-table th {
   background: var(--bg-surface-raised);
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-muted);
 }
 

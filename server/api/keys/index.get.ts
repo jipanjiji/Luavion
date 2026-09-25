@@ -16,19 +16,21 @@ export default defineEventHandler(async (event) => {
 
   const supabase = getSupabaseClient()
   if (supabase) {
-    const { data, error } = await supabase
-      .from('api_keys')
-      .select('id, name, key_prefix, is_active, rate_limit_per_minute, last_used_at, created_at')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
+    try {
+      const { data, error } = await supabase
+        .from('api_keys')
+        .select('id, name, key_prefix, is_active, rate_limit_per_minute, last_used_at, created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
 
-    if (error) {
-      throw createError({ statusCode: 500, statusMessage: error.message })
-    }
-
-    return {
-      allowed: true,
-      keys: data || []
+      if (!error && data) {
+        return {
+          allowed: true,
+          keys: data
+        }
+      }
+    } catch (e) {
+      console.warn('api_keys table not ready, using memory fallback')
     }
   }
 

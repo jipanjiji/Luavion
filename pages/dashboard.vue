@@ -1,57 +1,49 @@
 <template>
   <div class="dashboard-page">
-    <div class="container dashboard-container">
-      <!-- Top Welcome Banner -->
-      <div class="dashboard-head">
+    <div class="dashboard-container">
+      <div class="dashboard-head anim-fade-up">
         <div class="head-left">
-          <h1 class="dash-title">
-            Developer Workspace
-          </h1>
+          <h1 class="dash-title">Overview</h1>
           <p class="dash-sub">
-            Welcome back, <strong>{{ user?.displayName || user?.email }}</strong>. Monitor compiler telemetry, quota consumption, and active keys.
+            Welcome back, <strong>{{ user?.displayName || user?.email }}</strong> — telemetry, quota, and outputs at a glance.
           </p>
         </div>
-
-        <div class="head-right">
-          <NuxtLink to="/app" class="btn btn-accent btn-launch">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <polygon points="5 3 19 12 5 21 5 3"></polygon>
-            </svg>
-            <span>Launch Obfuscator Studio</span>
-          </NuxtLink>
-        </div>
+        <NuxtLink to="/app" class="btn btn-primary">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+          </svg>
+          New obfuscation
+        </NuxtLink>
       </div>
 
-      <!-- KPI Summary Cards Grid -->
+      <div v-if="user?.plan === 'free'" class="upgrade-nudge anim-fade-up" style="animation-delay: 40ms">
+        <div class="nudge-text">
+          <strong>You're on the Free tier.</strong>
+          <span>Unlock higher quotas, batch compilation, and cloud history retention.</span>
+        </div>
+        <NuxtLink to="/billing" class="btn btn-secondary btn-sm">View plans →</NuxtLink>
+      </div>
+
+      <!-- KPI Grid -->
       <div class="kpi-grid">
-        <!-- Card 1: Subscription Tier -->
-        <div class="surface kpi-card">
+        <div class="surface kpi-card anim-fade-up" style="animation-delay: 60ms">
           <div class="kpi-header">
-            <span class="kpi-label">SUBSCRIPTION PLAN</span>
-            <span class="badge" :class="`badge-plan-${user?.plan}`">
+            <span class="t-label">Subscription plan</span>
+            <span class="badge" :class="({ pro: 'badge-cyan', plus: 'badge-emerald', ultra: 'badge-amber' }[user?.plan] || '')">
               {{ (user?.plan || 'free').toUpperCase() }}
             </span>
           </div>
-          <div class="kpi-main-val">
-            {{ user?.planConfig?.name || 'Free Tier' }}
-          </div>
+          <div class="kpi-main-val">{{ user?.planConfig?.name || 'Free Tier' }}</div>
           <div class="kpi-footer-row">
-            <span class="kpi-sub">
-              {{ user?.planExpiresAt ? `Renews on ${new Date(user.planExpiresAt).toLocaleDateString()}` : 'Free Forever' }}
-            </span>
-            <NuxtLink to="/billing" class="kpi-action-link">
-              Manage Plan →
-            </NuxtLink>
+            <span class="kpi-sub">{{ user?.planExpiresAt ? `Renews ${new Date(user.planExpiresAt).toLocaleDateString()}` : 'Free forever' }}</span>
+            <NuxtLink to="/billing" class="kpi-action-link">Manage →</NuxtLink>
           </div>
         </div>
 
-        <!-- Card 2: Quota Meter -->
-        <div class="surface kpi-card">
+        <div class="surface kpi-card anim-fade-up" style="animation-delay: 120ms">
           <div class="kpi-header">
-            <span class="kpi-label">MONTHLY QUOTA USAGE</span>
-            <button class="topup-pill-btn" @click="showTopUpModal = true">
-              + Top-Up
-            </button>
+            <span class="t-label">Monthly quota</span>
+            <button class="topup-pill-btn mono" @click="showTopUpModal = true">+ top-up</button>
           </div>
           <div class="kpi-main-val">
             {{ user?.quotaUsed || 0 }} <span class="val-sub">/ {{ (user?.quotaLimit || 50).toLocaleString() }}</span>
@@ -61,152 +53,82 @@
           </div>
           <div class="kpi-footer-row">
             <span class="kpi-sub">
-              {{ user?.quotaRemaining || 0 }} remaining 
+              {{ user?.quotaRemaining || 0 }} remaining
               <span v-if="user?.quotaTopUp">({{ user.quotaTopUp }} top-up credits)</span>
             </span>
-            <span class="quota-pct-label">{{ quotaPercentage }}% used</span>
+            <span class="quota-pct-label mono">{{ quotaPercentage }}%</span>
           </div>
         </div>
 
-        <!-- Card 3: Max File Size -->
-        <div class="surface kpi-card">
+        <div class="surface kpi-card anim-fade-up" style="animation-delay: 180ms">
           <div class="kpi-header">
-            <span class="kpi-label">PAYLOAD CAPACITY</span>
-            <span class="badge badge-subtle">PER-FILE</span>
+            <span class="t-label">Payload capacity</span>
+            <span class="badge">per-file</span>
           </div>
-          <div class="kpi-main-val">
-            {{ user?.planConfig?.maxFileSizeLabel || '50 KB' }}
-          </div>
+          <div class="kpi-main-val">{{ user?.planConfig?.maxFileSizeLabel || '50 KB' }}</div>
           <div class="kpi-footer-row">
             <span class="kpi-sub">
-              Batch limit: {{ user?.planConfig?.maxBatchFiles > 1 ? `${user.planConfig.maxBatchFiles} files` : 'Single file' }}
+              Batch: {{ user?.planConfig?.maxBatchFiles > 1 ? `${user.planConfig.maxBatchFiles} files` : 'single file' }}
             </span>
-            <NuxtLink v-if="user?.plan !== 'ultra'" to="/pricing" class="kpi-action-link">
-              Upgrade →
-            </NuxtLink>
+            <NuxtLink v-if="user?.plan !== 'ultra'" to="/pricing" class="kpi-action-link">Upgrade →</NuxtLink>
           </div>
         </div>
 
-        <!-- Card 4: API Access -->
-        <div class="surface kpi-card">
+        <div class="surface kpi-card anim-fade-up" style="animation-delay: 240ms">
           <div class="kpi-header">
-            <span class="kpi-label">PUBLIC REST API</span>
-            <span v-if="user?.plan === 'ultra'" class="badge badge-emerald">ACTIVE</span>
-            <span v-else class="badge badge-amber">ULTRA ONLY</span>
+            <span class="t-label">Public REST API</span>
+            <span v-if="user?.plan === 'ultra'" class="badge badge-emerald">active</span>
+            <span v-else class="badge badge-amber">ultra only</span>
           </div>
-          <div class="kpi-main-val">
-            {{ user?.plan === 'ultra' ? '60 req / min' : 'Locked' }}
-          </div>
+          <div class="kpi-main-val">{{ user?.plan === 'ultra' ? '60 req / min' : 'Locked' }}</div>
           <div class="kpi-footer-row">
-            <span class="kpi-sub">
-              {{ user?.plan === 'ultra' ? 'Dedicated SLA routing' : 'Requires Ultra subscription' }}
-            </span>
-            <NuxtLink to="/keys" class="kpi-action-link">
-              {{ user?.plan === 'ultra' ? 'Manage Keys →' : 'Unlock API →' }}
-            </NuxtLink>
+            <span class="kpi-sub">{{ user?.plan === 'ultra' ? 'Dedicated SLA routing' : 'Requires Ultra subscription' }}</span>
+            <NuxtLink to="/keys" class="kpi-action-link">{{ user?.plan === 'ultra' ? 'Manage keys →' : 'Unlock →' }}</NuxtLink>
           </div>
         </div>
       </div>
 
-      <!-- Quick Navigation Hub Cards -->
-      <div class="hub-grid">
-        <NuxtLink to="/app" class="surface hub-card">
-          <div class="hub-icon icon-cyan">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="16 18 22 12 16 6"></polyline>
-              <polyline points="8 6 2 12 8 18"></polyline>
-            </svg>
-          </div>
-          <div class="hub-text">
-            <h3 class="hub-title">Obfuscator Studio</h3>
-            <p class="hub-desc">Open the dual-pane code compiler with Galois micro-ops.</p>
-          </div>
-        </NuxtLink>
-
-        <NuxtLink to="/history" class="surface hub-card">
-          <div class="hub-icon icon-emerald">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"></circle>
-              <polyline points="12 6 12 12 16 14"></polyline>
-            </svg>
-          </div>
-          <div class="hub-text">
-            <h3 class="hub-title">Obfuscation History</h3>
-            <p class="hub-desc">Review and re-download past outputs stored in your cloud vault.</p>
-          </div>
-        </NuxtLink>
-
-        <NuxtLink to="/billing" class="surface hub-card">
-          <div class="hub-icon icon-purple">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
-              <line x1="1" y1="10" x2="23" y2="10"></line>
-            </svg>
-          </div>
-          <div class="hub-text">
-            <h3 class="hub-title">Billing & Top-Ups</h3>
-            <p class="hub-desc">Manage your subscription, invoices, and purchase extra quota.</p>
-          </div>
-        </NuxtLink>
-
-        <NuxtLink to="/docs/api" class="surface hub-card">
-          <div class="hub-icon icon-amber">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-              <polyline points="14 2 14 8 20 8"></polyline>
-              <line x1="16" y1="13" x2="8" y2="13"></line>
-              <line x1="16" y1="17" x2="8" y2="17"></line>
-            </svg>
-          </div>
-          <div class="hub-text">
-            <h3 class="hub-title">API Documentation</h3>
-            <p class="hub-desc">Explore REST endpoint references, cURL examples, and webhooks.</p>
-          </div>
-        </NuxtLink>
-      </div>
-
-      <!-- Activity Telemetry & Recent Jobs Section -->
+      <!-- Activity -->
       <div class="dashboard-activity-row">
-        <!-- Left: Telemetry Chart Breakdown -->
-        <div class="surface chart-card">
+        <div class="surface chart-card anim-fade-up" style="animation-delay: 300ms">
           <div class="section-card-head">
-            <h2 class="card-title">Compilation Throughput</h2>
-            <span class="badge badge-subtle">Last 7 Days</span>
+            <h2 class="card-title">Compilation throughput</h2>
+            <span class="badge">last 7 days</span>
           </div>
-
-          <!-- CSS Bar Chart Visualization -->
           <div class="chart-bars-wrap">
             <div class="bar-col" v-for="(day, i) in sampleDailyStats" :key="i">
               <div class="bar-track">
-                <div class="bar-fill" :style="{ height: `${day.pct}%` }"></div>
+                <div class="bar-fill" :style="{ height: `${day.pct}%`, transitionDelay: 300 + i * 50 + 'ms' }"></div>
               </div>
-              <span class="bar-label">{{ day.label }}</span>
+              <span class="bar-label mono">{{ day.label }}</span>
             </div>
           </div>
           <div class="chart-footer">
             <span class="chart-legend">
               <span class="legend-dot"></span>
-              <span>Successful Obfuscations (Avg latency: 42ms)</span>
+              <span>Successful obfuscations · avg latency 42ms</span>
             </span>
           </div>
         </div>
 
-        <!-- Right: Recent Obfuscations Table Snippet -->
-        <div class="surface recent-card">
+        <div class="surface recent-card anim-fade-up" style="animation-delay: 360ms">
           <div class="section-card-head">
-            <h2 class="card-title">Recent Outputs</h2>
-            <NuxtLink to="/history" class="view-all-link">View All History →</NuxtLink>
+            <h2 class="card-title">Recent outputs</h2>
+            <NuxtLink to="/history" class="view-all-link">View all →</NuxtLink>
           </div>
 
-          <div v-if="loadingHistory" class="history-loading">
-            Loading cloud vault...
+          <div v-if="loadingHistory" class="skeleton-rows">
+            <div v-for="i in 4" :key="i" class="skeleton sk-row"></div>
           </div>
-          <div v-else-if="recentHistory.length === 0" class="history-empty">
-            <p>No past obfuscations in your history yet.</p>
-            <NuxtLink to="/app" class="btn btn-secondary btn-xs" style="margin-top: 8px;">
-              Obfuscate Your First Script
-            </NuxtLink>
-          </div>
+
+          <UiEmptyState
+            v-else-if="recentHistory.length === 0"
+            title="No obfuscations yet"
+            message="Your protected outputs stored in the cloud vault will appear here."
+          >
+            <NuxtLink to="/app" class="btn btn-secondary btn-sm">Obfuscate your first script</NuxtLink>
+          </UiEmptyState>
+
           <div v-else class="recent-table-wrap">
             <table class="recent-table">
               <thead>
@@ -214,22 +136,20 @@
                   <th>Script</th>
                   <th>Preset</th>
                   <th>Ratio</th>
-                  <th>Action</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="h in recentHistory" :key="h.id">
                   <td class="cell-name">
                     <span class="script-title">{{ h.filename }}</span>
-                    <span class="script-time">{{ new Date(h.created_at).toLocaleDateString() }}</span>
+                    <span class="script-time mono">{{ new Date(h.created_at).toLocaleDateString() }}</span>
                   </td>
+                  <td><span class="badge">{{ h.preset }}</span></td>
+                  <td class="cell-ratio mono">{{ h.expansion_ratio }}x</td>
                   <td>
-                    <span class="badge badge-subtle">{{ h.preset }}</span>
-                  </td>
-                  <td class="cell-ratio">{{ h.expansion_ratio }}x</td>
-                  <td>
-                    <button class="btn btn-ghost btn-xs" @click="downloadScript(h)" title="Re-download">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <button class="icon-btn" @click="downloadScript(h)" title="Re-download" aria-label="Download output">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                         <polyline points="7 10 12 15 17 10"></polyline>
                         <line x1="12" y1="15" x2="12" y2="3"></line>
@@ -243,13 +163,13 @@
         </div>
       </div>
 
-      <!-- Top Up Modal Component -->
       <TopUpModal v-model="showTopUpModal" />
     </div>
   </div>
 </template>
 
 <script setup>
+definePageMeta({ layout: 'dashboard' })
 import { ref, onMounted } from 'vue'
 import { useUser } from '~/composables/useUser'
 
@@ -316,201 +236,144 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.dashboard-page {
-  padding: 48px 0 96px;
-  min-height: 80vh;
-}
-
 .dashboard-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 36px;
+  margin-bottom: 24px;
   flex-wrap: wrap;
-  gap: 20px;
+  gap: 16px;
 }
 
 .dash-title {
-  font-size: 26px;
-  font-weight: 700;
-  color: #ffffff;
-  letter-spacing: -0.02em;
-  margin-bottom: 6px;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  margin-bottom: 4px;
 }
 
-.dash-sub {
-  font-size: 13px;
-  color: var(--text-secondary);
-}
+.dash-sub { font-size: 13px; color: var(--text-muted); }
 
-.btn-launch {
+.dash-sub strong { color: var(--text-primary); font-weight: 600; }
+
+/* Upgrade nudge */
+.upgrade-nudge {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 18px;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-regular);
+  border-left: 2px solid var(--text-primary);
+  border-radius: var(--radius-md);
+  flex-wrap: wrap;
 }
+
+.nudge-text { display: flex; flex-direction: column; gap: 2px; }
+
+.nudge-text strong { font-size: 13px; font-weight: 600; }
+
+.nudge-text span { font-size: 12px; color: var(--text-muted); }
 
 /* KPI Grid */
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 18px;
-  margin-bottom: 28px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+  margin-bottom: 24px;
 }
 
 .kpi-card {
-  border: 1px solid var(--border-regular);
-  border-radius: var(--radius-md);
-  padding: 20px;
+  padding: 18px;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  border-radius: var(--radius-md);
 }
 
 .kpi-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
-}
-
-.kpi-label {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: var(--text-muted);
-}
-
-.topup-pill-btn {
-  background: rgba(16, 185, 129, 0.12);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  color: #10b981;
-  font-size: 10px;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: var(--radius-full);
-  cursor: pointer;
-}
-.topup-pill-btn:hover {
-  background: rgba(16, 185, 129, 0.2);
+  gap: 8px;
 }
 
 .kpi-main-val {
-  font-size: 24px;
-  font-weight: 700;
-  color: #ffffff;
-  margin-bottom: 10px;
+  font-family: var(--font-mono);
+  font-size: 26px;
+  font-weight: 600;
   letter-spacing: -0.02em;
+  color: var(--text-primary);
+  position: relative;
+  z-index: 1;
 }
 
-.val-sub {
-  font-size: 14px;
-  font-weight: 400;
-  color: var(--text-muted);
-}
-
-.quota-progress-track {
-  height: 5px;
-  background: var(--bg-surface-raised);
-  border-radius: 999px;
-  overflow: hidden;
-  margin-bottom: 12px;
-}
-
-.quota-progress-fill {
-  height: 100%;
-  background: var(--accent-cyan);
-  transition: width 0.3s;
-}
+.val-sub { font-size: 14px; color: var(--text-faint); font-weight: 400; }
 
 .kpi-footer-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: auto;
-  font-size: 11px;
+  gap: 8px;
 }
 
-.kpi-sub {
-  color: var(--text-muted);
-}
+.kpi-sub { font-size: 11px; color: var(--text-muted); max-width: 75%; }
 
 .kpi-action-link {
-  color: var(--accent-cyan);
-  text-decoration: none;
-  font-weight: 600;
-}
-.kpi-action-link:hover {
-  text-decoration: underline;
-}
-
-.quota-pct-label {
-  color: var(--accent-cyan);
-  font-weight: 600;
-}
-
-/* Hub Grid */
-.hub-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-bottom: 36px;
-}
-
-.hub-card {
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  padding: 18px;
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  text-decoration: none;
-  transition: all var(--duration-fast);
-}
-.hub-card:hover {
-  border-color: var(--border-hover);
-  background: var(--bg-elevated);
-  transform: translateY(-2px);
-}
-
-.hub-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-xs);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-.icon-cyan { background: rgba(0, 240, 255, 0.1); color: var(--accent-cyan); }
-.icon-emerald { background: rgba(16, 185, 129, 0.1); color: var(--status-emerald); }
-.icon-purple { background: rgba(168, 85, 247, 0.1); color: #c084fc; }
-.icon-amber { background: rgba(245, 158, 11, 0.1); color: #fbbf24; }
-
-.hub-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: #ffffff;
-  margin-bottom: 4px;
-}
-
-.hub-desc {
   font-size: 11px;
-  color: var(--text-muted);
-  line-height: 1.4;
+  font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap;
 }
 
-/* Activity Row */
+.kpi-action-link:hover { color: var(--text-primary); }
+
+.topup-pill-btn {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-regular);
+  border-radius: var(--radius-full);
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.topup-pill-btn:hover { border-color: var(--border-hover); }
+
+.quota-progress-track {
+  width: 100%;
+  height: 3px;
+  background: var(--bg-overlay);
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+}
+
+.quota-progress-fill {
+  height: 100%;
+  background: var(--text-primary);
+  border-radius: 999px;
+  transition: width 700ms var(--ease-spring);
+}
+
+.quota-pct-label { font-size: 10px; color: var(--text-muted); }
+
+/* Activity row */
 .dashboard-activity-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 14px;
 }
 
-.chart-card,
-.recent-card {
-  border: 1px solid var(--border-regular);
+.chart-card, .recent-card {
+  padding: 22px;
   border-radius: var(--radius-md);
-  padding: 24px;
 }
 
 .section-card-head {
@@ -520,153 +383,116 @@ onMounted(() => {
   margin-bottom: 20px;
 }
 
-.card-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: #ffffff;
-}
+.card-title { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
 
-.view-all-link {
-  font-size: 11px;
-  color: var(--accent-cyan);
-  text-decoration: none;
-}
-.view-all-link:hover {
-  text-decoration: underline;
-}
+.view-all-link { font-size: 12px; font-weight: 500; color: var(--text-muted); }
+
+.view-all-link:hover { color: var(--text-primary); }
 
 /* Chart */
 .chart-bars-wrap {
   display: flex;
-  justify-content: space-between;
   align-items: flex-end;
-  height: 140px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--border-subtle);
+  gap: 10px;
+  height: 130px;
   margin-bottom: 14px;
 }
 
-.bar-col {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-}
+.bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; }
 
 .bar-track {
-  width: 24px;
-  height: 100px;
-  background: var(--bg-surface-raised);
-  border-radius: 4px;
-  display: flex;
-  align-items: flex-end;
+  width: 100%;
+  height: calc(100% - 20px);
+  background: var(--bg-base);
+  border: 1px solid var(--border-faint);
+  border-radius: var(--radius-xs);
+  position: relative;
   overflow: hidden;
 }
 
 .bar-fill {
-  width: 100%;
-  background: var(--accent-cyan);
-  border-radius: 4px 4px 0 0;
-  transition: height 0.5s ease;
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  background: linear-gradient(to top, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.05));
+  border-top: 1px solid rgba(255, 255, 255, 0.35);
+  transition: height 600ms var(--ease-spring);
 }
 
-.bar-label {
-  font-size: 10px;
-  color: var(--text-muted);
-}
+.bar-label { font-size: 9px; color: var(--text-faint); margin-top: 8px; }
 
-.chart-footer {
-  display: flex;
-  justify-content: space-between;
+.chart-footer { display: flex; }
+
+.chart-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-size: 11px;
   color: var(--text-muted);
 }
 
-.chart-legend {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
 .legend-dot {
-  width: 8px;
-  height: 8px;
+  width: 6px; height: 6px;
   border-radius: 50%;
-  background: var(--accent-cyan);
+  background: var(--text-secondary);
 }
 
-/* Recent Table */
-.recent-table-wrap {
-  overflow-x: auto;
-}
+/* Recent table */
+.skeleton-rows { display: flex; flex-direction: column; gap: 10px; }
 
-.recent-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-}
+.sk-row { height: 42px; }
 
-.recent-table th,
-.recent-table td {
-  padding: 8px 10px;
+.recent-table-wrap { overflow: hidden; }
+
+.recent-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+
+.recent-table th {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
   text-align: left;
+  padding: 0 10px 10px 0;
   border-bottom: 1px solid var(--border-subtle);
 }
 
-.recent-table th {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
+.recent-table td { padding: 12px 10px 12px 0; border-bottom: 1px solid var(--border-faint); }
+
+.recent-table tr:last-child td { border-bottom: none; }
+
+.cell-name { display: flex; flex-direction: column; gap: 2px; }
+
+.script-title { color: var(--text-primary); font-weight: 500; }
+
+.script-time { font-size: 10px; color: var(--text-faint); }
+
+.cell-ratio { font-size: 12px; color: var(--text-secondary); }
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background: transparent;
+  border: none;
   color: var(--text-muted);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
 }
 
-.cell-name {
-  display: flex;
-  flex-direction: column;
-}
-
-.script-title {
-  font-weight: 500;
+.icon-btn:hover {
   color: var(--text-primary);
-}
-
-.script-time {
-  font-size: 10px;
-  color: var(--text-muted);
-}
-
-.cell-ratio {
-  color: var(--status-emerald);
-  font-weight: 600;
-}
-
-.history-loading,
-.history-empty {
-  padding: 36px 12px;
-  text-align: center;
-  font-size: 12px;
-  color: var(--text-muted);
+  background: var(--accent-dimmer);
 }
 
 @media (max-width: 1024px) {
-  .kpi-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .hub-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .dashboard-activity-row {
-    grid-template-columns: 1fr;
-  }
+  .dashboard-activity-row { grid-template-columns: 1fr; }
 }
 
-@media (max-width: 680px) {
-  .kpi-grid {
-    grid-template-columns: 1fr;
-  }
-  .hub-grid {
-    grid-template-columns: 1fr;
-  }
+@media (max-width: 640px) {
+  .dashboard-head { margin-bottom: 18px; }
 }
 </style>

@@ -108,7 +108,7 @@ useHead({
 
 .changelog-title {
   font-size: 32px;
-  font-weight: 700;
+  font-weight: 600;
   color: #ffffff;
   margin: 12px 0 8px;
   letter-spacing: -0.02em;
@@ -146,7 +146,7 @@ useHead({
 
 .version-tag {
   font-size: 18px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--accent-cyan);
 }
 
@@ -157,7 +157,7 @@ useHead({
 
 .release-title {
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 600;
   color: #ffffff;
   margin-bottom: 12px;
 }

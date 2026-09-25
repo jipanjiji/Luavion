@@ -16,20 +16,22 @@ export default defineEventHandler(async (event) => {
 
   const supabase = getSupabaseClient()
   if (supabase) {
-    const { data, error } = await supabase
-      .from('obfuscation_history')
-      .select('id, filename, original_bytes, obfuscated_bytes, expansion_ratio, duration_ms, preset, lua_version, status, created_at, expires_at')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(50)
+    try {
+      const { data, error } = await supabase
+        .from('obfuscation_history')
+        .select('id, filename, original_bytes, obfuscated_bytes, expansion_ratio, duration_ms, preset, lua_version, status, created_at, expires_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(50)
 
-    if (error) {
-      throw createError({ statusCode: 500, statusMessage: error.message })
-    }
-
-    return {
-      history: data || [],
-      retentionDays: planConfig.historyRetentionDays
+      if (!error && data) {
+        return {
+          history: data,
+          retentionDays: planConfig.historyRetentionDays
+        }
+      }
+    } catch (e) {
+      console.warn('obfuscation_history table not ready, using memory fallback')
     }
   }
 

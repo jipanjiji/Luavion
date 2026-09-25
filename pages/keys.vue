@@ -1,6 +1,6 @@
 <template>
   <div class="keys-page">
-    <div class="container keys-container">
+    <div class="keys-container">
       <div class="keys-header">
         <div class="header-left">
           <div class="keys-tag">
@@ -206,6 +206,7 @@
 </template>
 
 <script setup>
+definePageMeta({ layout: 'dashboard' })
 import { ref, onMounted } from 'vue'
 import { useUser } from '~/composables/useUser'
 
@@ -297,8 +298,9 @@ onMounted(() => {
 
 <style scoped>
 .keys-page {
-  padding: 48px 0 96px;
-  min-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 
 .keys-header {
@@ -315,7 +317,7 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--accent-cyan);
   letter-spacing: 0.08em;
   margin-bottom: 8px;
@@ -323,7 +325,7 @@ onMounted(() => {
 
 .keys-title {
   font-size: 26px;
-  font-weight: 700;
+  font-weight: 600;
   color: #ffffff;
   letter-spacing: -0.02em;
   margin-bottom: 6px;
@@ -360,7 +362,7 @@ onMounted(() => {
 
 .lock-title {
   font-size: 22px;
-  font-weight: 700;
+  font-weight: 600;
   color: #ffffff;
   margin: 10px 0 8px;
 }
@@ -379,9 +381,9 @@ onMounted(() => {
 }
 
 .btn-upgrade {
-  background: linear-gradient(135deg, #a855f7, #00f0ff);
+  background: linear-gradient(135deg, #a855f7, var(--accent));
   color: var(--bg-void);
-  font-weight: 700;
+  font-weight: 600;
   border: none;
   display: flex;
   align-items: center;
@@ -407,7 +409,7 @@ onMounted(() => {
 .info-title {
   display: block;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 600;
   color: #ffffff;
 }
 
@@ -463,7 +465,7 @@ onMounted(() => {
 .keys-table th {
   background: var(--bg-surface-raised);
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-muted);
   letter-spacing: 0.05em;
 }
@@ -480,6 +482,49 @@ onMounted(() => {
 }
 
 /* Modals */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(6, 6, 7, 0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal-card {
+  background: var(--bg-surface-raised);
+  border: 1px solid var(--border-regular);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-highlight), var(--shadow-lg);
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+}
+
+.modal-enter-active { transition: opacity 200ms var(--ease-out); }
+.modal-leave-active { transition: opacity 150ms var(--ease-out); }
+.modal-enter-active .modal-card {
+  transition: opacity 250ms var(--ease-spring), transform 250ms var(--ease-spring);
+}
+.modal-leave-active .modal-card {
+  transition: opacity 150ms var(--ease-out), transform 150ms var(--ease-out);
+}
+.modal-enter-from, .modal-leave-to { opacity: 0; }
+.modal-enter-from .modal-card { opacity: 0; transform: scale(0.96) translateY(10px); }
+.modal-leave-to .modal-card { opacity: 0; transform: scale(0.97) translateY(6px); }
+
+@media (max-width: 560px) {
+  .modal-backdrop { padding: 0; align-items: flex-end; }
+  .modal-backdrop .modal-card {
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    max-height: 92vh;
+    border-bottom: none;
+  }
+}
+
 .create-key-modal,
 .secret-display-modal {
   width: 100%;
@@ -494,7 +539,7 @@ onMounted(() => {
 .form-label {
   display: block;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-muted);
   margin-bottom: 8px;
 }

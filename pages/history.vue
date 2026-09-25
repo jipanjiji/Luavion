@@ -1,6 +1,6 @@
 <template>
   <div class="history-page">
-    <div class="container history-container">
+    <div class="history-container">
       <div class="history-header">
         <div class="header-left">
           <div class="history-tag">
@@ -177,6 +177,7 @@
 </template>
 
 <script setup>
+definePageMeta({ layout: 'dashboard' })
 import { ref, computed, onMounted } from 'vue'
 import { useUser } from '~/composables/useUser'
 
@@ -274,8 +275,9 @@ onMounted(() => {
 
 <style scoped>
 .history-page {
-  padding: 48px 0 96px;
-  min-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 
 .history-header {
@@ -292,7 +294,7 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--accent-cyan);
   letter-spacing: 0.08em;
   margin-bottom: 8px;
@@ -300,7 +302,7 @@ onMounted(() => {
 
 .history-title {
   font-size: 26px;
-  font-weight: 700;
+  font-weight: 600;
   color: #ffffff;
   letter-spacing: -0.02em;
   margin-bottom: 6px;
@@ -322,7 +324,7 @@ onMounted(() => {
 
 .retention-label {
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-muted);
 }
 
@@ -356,7 +358,7 @@ onMounted(() => {
 
 .banner-title {
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 600;
   color: #ffffff;
   margin-bottom: 4px;
 }
@@ -412,7 +414,7 @@ onMounted(() => {
 
 .filter-label {
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-muted);
 }
 
@@ -474,7 +476,7 @@ onMounted(() => {
 .history-table th {
   background: var(--bg-surface-raised);
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-muted);
   letter-spacing: 0.05em;
 }
@@ -539,7 +541,7 @@ onMounted(() => {
 
 .viewer-title {
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 600;
   color: #ffffff;
 }
 
@@ -556,5 +558,36 @@ onMounted(() => {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+}
+
+/* Detail modal */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(6, 6, 7, 0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal-card {
+  max-height: calc(100vh - 40px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 560px) {
+  .modal-backdrop { padding: 0; align-items: flex-end; }
+  .modal-backdrop .modal-card {
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    max-height: 92vh;
+    border-bottom: none;
+    width: 100% !important;
+  }
 }
 </style>

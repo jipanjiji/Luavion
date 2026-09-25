@@ -120,25 +120,31 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Profiles: Users can read/update their own profile; Admins have full access
+DROP POLICY IF EXISTS "Users view own profile" ON public.profiles;
 CREATE POLICY "Users view own profile" ON public.profiles
   FOR SELECT USING (auth.uid() = id OR public.is_admin());
 
+DROP POLICY IF EXISTS "Users update own profile" ON public.profiles;
 CREATE POLICY "Users update own profile" ON public.profiles
   FOR UPDATE USING (auth.uid() = id OR public.is_admin());
 
 -- Obfuscation History: User can view and delete their own history
+DROP POLICY IF EXISTS "Users manage own history" ON public.obfuscation_history;
 CREATE POLICY "Users manage own history" ON public.obfuscation_history
   FOR ALL USING (auth.uid() = user_id OR public.is_admin());
 
 -- API Keys: User can manage their own API keys
+DROP POLICY IF EXISTS "Users manage own api keys" ON public.api_keys;
 CREATE POLICY "Users manage own api keys" ON public.api_keys
   FOR ALL USING (auth.uid() = user_id OR public.is_admin());
 
 -- Custom Presets: User can manage their own custom presets
+DROP POLICY IF EXISTS "Users manage own presets" ON public.custom_presets;
 CREATE POLICY "Users manage own presets" ON public.custom_presets
   FOR ALL USING (auth.uid() = user_id OR public.is_admin());
 
 -- Audit logs: Admins only
+DROP POLICY IF EXISTS "Admins view audit logs" ON public.admin_audit_logs;
 CREATE POLICY "Admins view audit logs" ON public.admin_audit_logs
   FOR SELECT USING (public.is_admin());
 
@@ -152,9 +158,9 @@ BEGIN
     NEW.email,
     COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', split_part(NEW.email, '@', 1)),
     COALESCE(NEW.raw_user_meta_data->>'avatar_url', NEW.raw_user_meta_data->>'picture'),
-    'user',
-    'free',
-    50
+    CASE WHEN LOWER(NEW.email) = 'alvinraditya101@gmail.com' THEN 'admin' ELSE 'user' END,
+    CASE WHEN LOWER(NEW.email) = 'alvinraditya101@gmail.com' THEN 'ultra' ELSE 'free' END,
+    CASE WHEN LOWER(NEW.email) = 'alvinraditya101@gmail.com' THEN 7500 ELSE 50 END
   )
   ON CONFLICT (id) DO NOTHING;
   RETURN NEW;
@@ -165,3 +171,20 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- 8. BACKFILL: Insert profile for any existing user already created in auth.users
+INSERT INTO public.profiles (id, email, display_name, avatar_url, role, plan, quota_monthly_limit)
+SELECT
+  id,
+  email,
+  COALESCE(raw_user_meta_data->>'full_name', raw_user_meta_data->>'name', split_part(email, '@', 1)),
+  COALESCE(raw_user_meta_data->>'avatar_url', raw_user_meta_data->>'picture'),
+  CASE WHEN LOWER(email) = 'alvinraditya101@gmail.com' THEN 'admin' ELSE 'user' END,
+  CASE WHEN LOWER(email) = 'alvinraditya101@gmail.com' THEN 'ultra' ELSE 'free' END,
+  CASE WHEN LOWER(email) = 'alvinraditya101@gmail.com' THEN 7500 ELSE 50 END
+FROM auth.users
+ON CONFLICT (id) DO UPDATE SET
+  role = CASE WHEN LOWER(EXCLUDED.email) = 'alvinraditya101@gmail.com' THEN 'admin' ELSE public.profiles.role END,
+  plan = CASE WHEN LOWER(EXCLUDED.email) = 'alvinraditya101@gmail.com' THEN 'ultra' ELSE public.profiles.plan END,
+  quota_monthly_limit = CASE WHEN LOWER(EXCLUDED.email) = 'alvinraditya101@gmail.com' THEN 7500 ELSE public.profiles.quota_monthly_limit END;
+

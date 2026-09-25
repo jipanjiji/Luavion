@@ -54,7 +54,8 @@ export function useUser() {
   const fetchUser = async () => {
     try {
       loading.value = true
-      const res = await $fetch<any>('/api/auth/me')
+      const headers = import.meta.server ? useRequestHeaders(['cookie']) : undefined
+      const res = await $fetch<any>('/api/auth/me', { headers })
       if (res && res.authenticated) {
         user.value = res.user
         isAuthenticated.value = true
@@ -102,11 +103,18 @@ export function useUser() {
     return Math.min(100, Math.round((user.value.quotaUsed / limit) * 100))
   })
 
+  const quotaLeft = computed(() => {
+    if (!user.value) return 0
+    const limit = user.value.quotaLimit || 50
+    return Math.max(0, limit - (user.value.quotaUsed || 0))
+  })
+
   return {
     user,
     isAuthenticated,
     loading,
     quotaPercentage,
+    quotaLeft,
     activeUpgradeModal,
     toast,
     fetchUser,

@@ -8,6 +8,10 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, statusMessage: 'Not authenticated' })
   }
 
+  if (user.role !== 'admin') {
+    throw createError({ statusCode: 403, statusMessage: 'Administrator privileges required to switch simulation tiers.' })
+  }
+
   const body = await readBody(event) || {}
   const { plan, role } = body
 

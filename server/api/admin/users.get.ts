@@ -9,13 +9,18 @@ export default defineEventHandler(async (event) => {
 
   const supabase = getSupabaseClient()
   if (supabase) {
-    let q = supabase.from('profiles').select('*').order('created_at', { ascending: false }).limit(100)
-    if (search) {
-      q = q.or(`email.ilike.%${search}%,display_name.ilike.%${search}%`)
+    try {
+      let q = supabase.from('profiles').select('*').order('created_at', { ascending: false }).limit(100)
+      if (search) {
+        q = q.or(`email.ilike.%${search}%,display_name.ilike.%${search}%`)
+      }
+      const { data, error } = await q
+      if (!error && data) {
+        return { users: data }
+      }
+    } catch (e) {
+      console.warn('profiles table not ready for admin query, using memory fallback')
     }
-    const { data, error } = await q
-    if (error) throw createError({ statusCode: 500, statusMessage: error.message })
-    return { users: data || [] }
   }
 
   // Fallback to mock store

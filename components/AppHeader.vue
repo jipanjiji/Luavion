@@ -1,222 +1,154 @@
 <template>
   <header class="app-header">
     <div class="container header-inner">
-      <!-- Brand Logo / Identity -->
-      <NuxtLink to="/" class="brand-link" aria-label="Luavion Home">
-        <div class="brand-mark">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
-            <polyline points="2 17 12 22 22 17"></polyline>
-            <polyline points="2 12 12 17 22 12"></polyline>
-          </svg>
-        </div>
-        <div class="brand-details">
-          <span class="brand-title">LUAVION</span>
-          <span class="brand-version">v9.15</span>
-        </div>
+      <!-- Brand -->
+      <NuxtLink to="/" class="brand-link" aria-label="Luavion home">
+        <img src="/logo.png" alt="" class="brand-logo" width="26" height="26" />
+        <span class="brand-word mono">luavion<span class="brand-cursor" aria-hidden="true"></span></span>
       </NuxtLink>
 
-      <!-- Desktop Navigation Menu -->
-      <nav class="nav-menu" aria-label="Main Navigation">
-        <NuxtLink to="/app" class="nav-item" :class="{ active: route.path === '/app' }">Studio</NuxtLink>
-        <NuxtLink to="/pricing" class="nav-item" :class="{ active: route.path === '/pricing' }">Pricing</NuxtLink>
-        <NuxtLink to="/docs/api" class="nav-item" :class="{ active: route.path.startsWith('/docs') }">API Docs</NuxtLink>
-        <NuxtLink to="/changelog" class="nav-item" :class="{ active: route.path === '/changelog' }">Changelog</NuxtLink>
-        <NuxtLink to="/status" class="nav-item" :class="{ active: route.path === '/status' }">Status</NuxtLink>
+      <!-- Desktop Nav -->
+      <nav class="nav-menu" aria-label="Primary">
+        <NuxtLink
+          v-for="item in navItems"
+          :key="item.to"
+          :to="item.to"
+          class="nav-item"
+          :class="{ active: isActive(item.to) }"
+        >{{ item.label }}</NuxtLink>
       </nav>
 
-      <!-- Right Header Actions -->
+      <!-- Right -->
       <div class="header-actions">
-        <!-- Live Engine Pulse -->
-        <div class="engine-badge" title="Luau Galois Register VM 9.15 Active">
-          <span class="pulse-indicator">
-            <span class="dot-core"></span>
-            <span class="dot-ring"></span>
-          </span>
-          <span class="engine-text">VM ONLINE</span>
-        </div>
+        <template v-if="!isAuthenticated">
+          <NuxtLink to="/login" class="btn btn-ghost btn-sm">Sign in</NuxtLink>
+          <NuxtLink to="/pricing" class="btn btn-primary btn-sm">Get Started</NuxtLink>
+        </template>
 
-        <!-- Authenticated User Menu Dropdown -->
-        <div v-if="isAuthenticated && user" class="user-menu-wrap" ref="userMenuRef">
-          <button 
-            class="user-profile-btn" 
-            @click="menuOpen = !menuOpen" 
+        <div v-else class="user-menu-wrap" ref="userMenuRef">
+          <button
+            class="user-profile-btn"
+            @click="menuOpen = !menuOpen"
             :aria-expanded="menuOpen"
-            title="User Account Menu"
+            aria-haspopup="menu"
+            aria-label="Account menu"
           >
-            <img 
-              v-if="user.avatarUrl" 
-              :src="user.avatarUrl" 
-              :alt="user.displayName" 
-              class="user-avatar" 
+            <img
+              v-if="(user?.avatarUrl || user?.avatar_url) && !avatarError"
+              :src="user?.avatarUrl || user?.avatar_url"
+              class="user-avatar"
+              alt=""
+              referrerpolicy="no-referrer"
+              @error="avatarError = true"
             />
-            <div v-else class="avatar-placeholder">
-              {{ (user.displayName || user.email)[0].toUpperCase() }}
-            </div>
-            <div class="user-btn-details">
-              <span class="user-name">{{ user.displayName || user.email.split('@')[0] }}</span>
-              <span class="badge" :class="`badge-plan-${user.plan}`">{{ user.plan.toUpperCase() }}</span>
-            </div>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="chevron-icon" :class="{ rotated: menuOpen }">
-              <polyline points="6 9 12 15 18 9"></polyline>
+            <span v-else class="avatar-placeholder">{{ userInitial }}</span>
+            <span class="profile-name">{{ user?.displayName || user?.name || user?.email?.split('@')[0] || 'Account' }}</span>
+            <svg class="chevron-icon" :class="{ rotated: menuOpen }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <polyline points="6 9 12 15 18 9" />
             </svg>
           </button>
 
-          <!-- Dropdown Card -->
           <transition name="dropdown">
-            <div v-if="menuOpen" class="user-dropdown-card surface">
+            <div v-if="menuOpen" class="user-dropdown-card" role="menu">
               <div class="dropdown-header">
                 <div class="dropdown-user-info">
-                  <span class="dropdown-name">{{ user.displayName }}</span>
-                  <span class="dropdown-email">{{ user.email }}</span>
+                  <span class="dropdown-name">{{ user?.displayName || user?.name || user?.email?.split('@')[0] || 'User' }}</span>
+                  <span class="dropdown-email">{{ user?.email }}</span>
                 </div>
-                <span class="badge" :class="`badge-plan-${user.plan}`">{{ user.plan.toUpperCase() }}</span>
+                <span class="badge" :class="planBadgeClass">{{ user?.plan || 'free' }}</span>
               </div>
 
-              <!-- Mini Quota Progress Meter -->
               <div class="dropdown-quota-meter">
-                <div class="quota-meter-head">
-                  <span>Monthly Quota</span>
-                  <span class="quota-numbers">{{ user.quotaUsed }} / {{ user.quotaLimit }}</span>
+                <div class="quota-meter-head mono">
+                  <span>Monthly quota</span>
+                  <span class="quota-numbers">{{ Math.round(quotaPercentage) }}%</span>
                 </div>
                 <div class="quota-track">
-                  <div class="quota-fill" :style="{ width: `${quotaPercentage}%` }"></div>
+                  <div class="quota-fill" :style="{ width: quotaPercentage + '%' }"></div>
                 </div>
-                <NuxtLink to="/billing" class="quota-topup-link" @click="menuOpen = false">
-                  <span>+ Top Up Credits</span>
-                </NuxtLink>
+                <NuxtLink to="/billing" class="quota-topup-link" @click="menuOpen = false">Manage plan →</NuxtLink>
               </div>
 
               <div class="dropdown-divider"></div>
 
-              <!-- Menu Navigation Links -->
-              <div class="dropdown-links">
-                <NuxtLink to="/dashboard" class="dropdown-link" @click="menuOpen = false">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="3" y="3" width="7" height="7"></rect>
-                    <rect x="14" y="3" width="7" height="7"></rect>
-                    <rect x="14" y="14" width="7" height="7"></rect>
-                    <rect x="3" y="14" width="7" height="7"></rect>
-                  </svg>
-                  <span>Dashboard</span>
+              <nav class="dropdown-links" aria-label="Account">
+                <NuxtLink v-for="link in accountLinks" :key="link.to" :to="link.to" class="dropdown-link" role="menuitem" @click="menuOpen = false">{{ link.label }}</NuxtLink>
+                <NuxtLink v-if="user?.role === 'admin'" to="/admin" class="dropdown-link" @click="menuOpen = false">
+                  Admin <span class="badge" style="margin-left:auto">admin</span>
                 </NuxtLink>
-
-                <NuxtLink to="/history" class="dropdown-link" @click="menuOpen = false">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <polyline points="12 6 12 12 16 14"></polyline>
-                  </svg>
-                  <span>Obfuscation History</span>
-                </NuxtLink>
-
-                <NuxtLink to="/billing" class="dropdown-link" @click="menuOpen = false">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
-                    <line x1="1" y1="10" x2="23" y2="10"></line>
-                  </svg>
-                  <span>Billing & Subscriptions</span>
-                </NuxtLink>
-
-                <NuxtLink to="/keys" class="dropdown-link" @click="menuOpen = false">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path>
-                  </svg>
-                  <span>API Keys (Ultra)</span>
-                </NuxtLink>
-
-                <NuxtLink to="/settings" class="dropdown-link" @click="menuOpen = false">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="3"></circle>
-                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-                  </svg>
-                  <span>Account Settings</span>
-                </NuxtLink>
-
-                <!-- Admin Link -->
-                <NuxtLink v-if="user.role === 'admin'" to="/admin" class="dropdown-link admin-link" @click="menuOpen = false">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                  </svg>
-                  <span>Admin Panel</span>
-                </NuxtLink>
-              </div>
+              </nav>
 
               <div class="dropdown-divider"></div>
 
-              <div class="dropdown-footer">
-                <button class="logout-btn" @click="handleLogout">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                    <polyline points="16 17 21 12 16 7"></polyline>
-                    <line x1="21" y1="12" x2="9" y2="12"></line>
-                  </svg>
-                  <span>Sign Out</span>
-                </button>
-              </div>
+              <button class="logout-btn" @click="handleLogout">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+                Sign out
+              </button>
             </div>
           </transition>
         </div>
 
-        <!-- Unauthenticated CTA Group -->
-        <div v-else class="auth-btn-group">
-          <NuxtLink to="/login" class="btn btn-secondary btn-sm">
-            Sign In
-          </NuxtLink>
-          <NuxtLink to="/app" class="btn btn-accent btn-sm">
-            <span>Studio</span>
-            <span class="btn-kbd">⌘K</span>
-          </NuxtLink>
-        </div>
-
-        <!-- Mobile Drawer Toggle -->
-        <button 
-          class="mobile-menu-btn" 
-          @click="mobileDrawerOpen = !mobileDrawerOpen" 
-          aria-label="Toggle navigation drawer"
+        <!-- Mobile toggle -->
+        <button
+          class="mobile-menu-btn"
+          @click="mobileDrawerOpen = !mobileDrawerOpen"
+          :aria-expanded="mobileDrawerOpen"
+          aria-label="Toggle navigation menu"
         >
-          <svg v-if="!mobileDrawerOpen" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="3" y1="12" x2="21" y2="12"></line>
-            <line x1="3" y1="6" x2="21" y2="6"></line>
-            <line x1="3" y1="18" x2="21" y2="18"></line>
+          <svg v-if="!mobileDrawerOpen" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+            <line x1="3" y1="7" x2="21" y2="7" /><line x1="3" y1="17" x2="21" y2="17" />
           </svg>
-          <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
+          <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
           </svg>
         </button>
       </div>
     </div>
 
-    <!-- Mobile Drawer -->
+    <!-- Mobile full-screen drawer -->
     <transition name="drawer">
       <div v-if="mobileDrawerOpen" class="mobile-drawer">
-        <div class="mobile-drawer-links">
-          <NuxtLink to="/" class="mobile-nav-link" @click="mobileDrawerOpen = false">Home Overview</NuxtLink>
-          <NuxtLink to="/app" class="mobile-nav-link" @click="mobileDrawerOpen = false">Obfuscator Studio</NuxtLink>
-          <NuxtLink to="/pricing" class="mobile-nav-link" @click="mobileDrawerOpen = false">Pricing & Plans</NuxtLink>
-          <NuxtLink to="/docs/api" class="mobile-nav-link" @click="mobileDrawerOpen = false">Developer API Docs</NuxtLink>
-          <NuxtLink to="/changelog" class="mobile-nav-link" @click="mobileDrawerOpen = false">Engine Changelog</NuxtLink>
-          <NuxtLink to="/status" class="mobile-nav-link" @click="mobileDrawerOpen = false">System Status</NuxtLink>
-          
-          <div class="drawer-divider" v-if="isAuthenticated"></div>
-          
+        <nav class="mobile-drawer-links" aria-label="Mobile">
+          <NuxtLink
+            v-for="(item, i) in navItems"
+            :key="item.to"
+            :to="item.to"
+            class="mobile-nav-link"
+            :style="{ transitionDelay: 40 + i * 40 + 'ms' }"
+            @click="mobileDrawerOpen = false"
+          >
+            <span class="mono mobile-link-index">0{{ i + 1 }}</span>{{ item.label }}
+          </NuxtLink>
+
           <template v-if="isAuthenticated">
-            <NuxtLink to="/dashboard" class="mobile-nav-link" @click="mobileDrawerOpen = false">Dashboard</NuxtLink>
-            <NuxtLink to="/history" class="mobile-nav-link" @click="mobileDrawerOpen = false">Obfuscation History</NuxtLink>
-            <NuxtLink to="/billing" class="mobile-nav-link" @click="mobileDrawerOpen = false">Billing & Subscriptions</NuxtLink>
-            <NuxtLink to="/keys" class="mobile-nav-link" @click="mobileDrawerOpen = false">API Keys</NuxtLink>
-            <NuxtLink to="/settings" class="mobile-nav-link" @click="mobileDrawerOpen = false">Account Settings</NuxtLink>
-            <NuxtLink v-if="user?.role === 'admin'" to="/admin" class="mobile-nav-link" @click="mobileDrawerOpen = false">Admin Control Panel</NuxtLink>
+            <div class="drawer-divider"></div>
+            <NuxtLink
+              v-for="(link, i) in accountLinks"
+              :key="link.to"
+              :to="link.to"
+              class="mobile-nav-link"
+              :style="{ transitionDelay: 280 + i * 40 + 'ms' }"
+              @click="mobileDrawerOpen = false"
+            >
+              <span class="mono mobile-link-index">{{ String(navItems.length + i + 1).padStart(2, '0') }}</span>{{ link.label }}
+            </NuxtLink>
+            <NuxtLink
+              v-if="user?.role === 'admin'"
+              to="/admin"
+              class="mobile-nav-link"
+              :style="{ transitionDelay: 280 + accountLinks.length * 40 + 'ms' }"
+              @click="mobileDrawerOpen = false"
+            >
+              <span class="mono mobile-link-index">{{ String(navItems.length + accountLinks.length + 1).padStart(2, '0') }}</span>Admin
+            </NuxtLink>
           </template>
-        </div>
+        </nav>
 
         <div class="mobile-drawer-footer">
-          <NuxtLink v-if="!isAuthenticated" to="/login" class="btn btn-secondary" style="width: 100%; margin-bottom: 8px;" @click="mobileDrawerOpen = false">
-            Sign In with Google
-          </NuxtLink>
-          <NuxtLink to="/app" class="btn btn-accent" style="width: 100%;" @click="mobileDrawerOpen = false">
-            Launch Obfuscator Studio
-          </NuxtLink>
+          <NuxtLink v-if="!isAuthenticated" to="/login" class="btn btn-secondary btn-lg" @click="mobileDrawerOpen = false">Sign in</NuxtLink>
+          <NuxtLink to="/dashboard" class="btn btn-primary btn-lg" @click="mobileDrawerOpen = false">Go to dashboard</NuxtLink>
         </div>
       </div>
     </transition>
@@ -224,7 +156,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useUser } from '~/composables/useUser'
 
 const route = useRoute()
@@ -233,26 +165,80 @@ const { user, isAuthenticated, quotaPercentage, logout, fetchUser } = useUser()
 const menuOpen = ref(false)
 const mobileDrawerOpen = ref(false)
 const userMenuRef = ref(null)
+const avatarError = ref(false)
+
+const navItems = computed(() => {
+  const items = [
+    { to: '/pricing', label: 'Pricing' },
+    { to: '/docs/api', label: 'API Docs' },
+    { to: '/changelog', label: 'Changelog' },
+    { to: '/status', label: 'Status' },
+  ]
+  if (isAuthenticated.value) {
+    items.unshift(
+      { to: '/dashboard', label: 'Dashboard' },
+      { to: '/app', label: 'Studio' }
+    )
+  }
+  return items
+})
+
+const accountLinks = [
+  { to: '/dashboard', label: 'Dashboard' },
+  { to: '/history', label: 'History' },
+  { to: '/billing', label: 'Billing' },
+  { to: '/keys', label: 'API Keys' },
+  { to: '/settings', label: 'Settings' },
+]
+
+const isActive = (to) => to === '/' ? route.path === '/' : route.path.startsWith(to)
+
+const userInitial = computed(() => (user.value?.displayName || user.value?.name || user.value?.email || 'U').charAt(0).toUpperCase())
+
+const planBadgeClass = computed(() => ({
+  free: '',
+  plus: 'badge-emerald',
+  pro: 'badge-cyan',
+  ultra: 'badge-amber',
+}[user.value?.plan] || ''))
 
 const handleLogout = async () => {
   menuOpen.value = false
   await logout()
 }
 
-// Close dropdown on outside click
 const handleClickOutside = (e) => {
   if (userMenuRef.value && !userMenuRef.value.contains(e.target)) {
     menuOpen.value = false
   }
 }
 
+const handleEscape = (e) => {
+  if (e.key === 'Escape') {
+    menuOpen.value = false
+    mobileDrawerOpen.value = false
+  }
+}
+
+watch(mobileDrawerOpen, (open) => {
+  document.body.style.overflow = open ? 'hidden' : ''
+})
+
+watch(() => route.path, () => {
+  mobileDrawerOpen.value = false
+  menuOpen.value = false
+})
+
 onMounted(() => {
   fetchUser()
   document.addEventListener('click', handleClickOutside)
+  document.addEventListener('keydown', handleEscape)
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
+  document.removeEventListener('keydown', handleEscape)
+  document.body.style.overflow = ''
 })
 </script>
 
@@ -261,9 +247,9 @@ onUnmounted(() => {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(5, 8, 14, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: rgba(10, 10, 11, 0.75);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
   border-bottom: 1px solid var(--border-subtle);
 }
 
@@ -271,196 +257,155 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 60px;
+  height: 58px;
+  gap: 24px;
 }
 
 /* Brand */
-.brand-link {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  text-decoration: none;
+.brand-link { display: flex; align-items: center; gap: 9px; }
+
+.brand-logo {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+  border-radius: 6px;
+  display: block;
 }
 
-.brand-mark {
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-xs);
-  background: var(--bg-surface-raised);
-  border: 1px solid var(--border-regular);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--accent-cyan);
-  transition: all var(--duration-fast);
-}
-.brand-link:hover .brand-mark {
-  border-color: var(--accent-cyan);
-  box-shadow: 0 0 16px rgba(0, 240, 255, 0.2);
-}
-
-.brand-details {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-}
-
-.brand-title {
+.brand-word {
   font-size: 15px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.02em;
-  color: #ffffff;
+  color: var(--text-primary);
+  display: inline-flex;
+  align-items: center;
 }
 
-.brand-version {
-  font-size: 10px;
-  color: var(--text-muted);
+.brand-cursor {
+  display: inline-block;
+  width: 7px;
+  height: 15px;
+  margin-left: 3px;
+  background: var(--text-primary);
+  animation: blink 1.1s steps(2, start) infinite;
 }
 
-/* Navigation Links */
+@keyframes blink { to { visibility: hidden; } }
+
+/* Desktop nav */
 .nav-menu {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
+  margin-right: auto;
 }
 
 .nav-item {
-  color: var(--text-secondary);
-  text-decoration: none;
-  font-size: 12px;
-  font-weight: 500;
-  padding: 6px 12px;
-  border-radius: var(--radius-xs);
-  transition: all var(--duration-fast);
-}
-.nav-item:hover,
-.nav-item.active {
-  color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.05);
-}
-
-/* Right Actions */
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.engine-badge {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--bg-surface-raised);
-  border: 1px solid var(--border-subtle);
-  padding: 4px 10px;
-  border-radius: var(--radius-xs);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
-}
-
-.auth-btn-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-/* User Menu & Dropdown */
-.user-menu-wrap {
   position: relative;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 7px 12px;
+  border-radius: var(--radius-sm);
+  transition: color var(--duration-fast) var(--ease-out), background var(--duration-fast) var(--ease-out);
 }
+
+.nav-item::after {
+  content: '';
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 2px;
+  height: 1.5px;
+  border-radius: 2px;
+  background: var(--text-primary);
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform var(--duration-normal) var(--ease-spring);
+}
+
+.nav-item:hover { color: var(--text-primary); background: rgba(255, 255, 255, 0.05); }
+
+.nav-item.active { color: var(--text-primary); }
+.nav-item.active::after { transform: scaleX(1); }
+
+/* Right actions */
+.header-actions { display: flex; align-items: center; gap: 10px; }
+
+/* User menu */
+.user-menu-wrap { position: relative; }
 
 .user-profile-btn {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   background: var(--bg-surface-raised);
   border: 1px solid var(--border-regular);
-  padding: 4px 10px 4px 6px;
-  border-radius: var(--radius-xs);
+  padding: 5px 12px 5px 5px;
+  border-radius: var(--radius-full);
   cursor: pointer;
   color: var(--text-primary);
-  transition: all var(--duration-fast);
-}
-.user-profile-btn:hover {
-  border-color: var(--border-hover);
+  transition: border-color var(--duration-fast) var(--ease-out);
+  min-height: 36px;
 }
 
-.user-avatar {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  object-fit: cover;
-}
+.user-profile-btn:hover { border-color: var(--border-hover); }
+
+.user-avatar { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; }
 
 .avatar-placeholder {
-  width: 22px;
-  height: 22px;
+  width: 26px; height: 26px;
   border-radius: 50%;
-  background: var(--accent-cyan-dim);
-  color: var(--accent-cyan);
-  font-size: 11px;
-  font-weight: 700;
+  background: var(--bg-overlay);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.user-btn-details {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.user-name {
-  font-size: 12px;
+.profile-name {
+  font-size: 13px;
   font-weight: 600;
-  max-width: 100px;
+  letter-spacing: -0.01em;
+  max-width: 120px;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.chevron-icon {
-  color: var(--text-muted);
-  transition: transform var(--duration-fast);
-}
-.chevron-icon.rotated {
-  transform: rotate(180deg);
-}
+.chevron-icon { color: var(--text-muted); transition: transform var(--duration-fast) var(--ease-out); }
+.chevron-icon.rotated { transform: rotate(180deg); }
 
-/* Dropdown Card */
 .user-dropdown-card {
   position: absolute;
-  top: calc(100% + 8px);
+  top: calc(100% + 10px);
   right: 0;
-  width: 260px;
-  background: var(--bg-surface);
+  width: 272px;
+  background: var(--bg-surface-raised);
   border: 1px solid var(--border-regular);
   border-radius: var(--radius-md);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
-  padding: 12px;
+  box-shadow: var(--shadow-lg);
+  padding: 14px;
   z-index: 200;
 }
+
+.dropdown-enter-active { transition: opacity 180ms var(--ease-spring), transform 180ms var(--ease-spring); }
+.dropdown-leave-active { transition: opacity 120ms var(--ease-out), transform 120ms var(--ease-out); }
+.dropdown-enter-from, .dropdown-leave-to { opacity: 0; transform: translateY(-6px) scale(0.98); }
 
 .dropdown-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  gap: 10px;
   margin-bottom: 12px;
 }
 
-.dropdown-user-info {
-  display: flex;
-  flex-direction: column;
-}
+.dropdown-user-info { display: flex; flex-direction: column; min-width: 0; }
 
-.dropdown-name {
-  font-size: 13px;
-  font-weight: 700;
-  color: #ffffff;
-}
+.dropdown-name { font-size: 13px; font-weight: 600; }
 
 .dropdown-email {
   font-size: 11px;
@@ -468,15 +413,14 @@ onUnmounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 170px;
 }
 
 .dropdown-quota-meter {
-  background: var(--bg-surface-raised);
+  background: var(--bg-base);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xs);
-  padding: 8px 10px;
-  margin-bottom: 8px;
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin-bottom: 10px;
 }
 
 .quota-meter-head {
@@ -484,163 +428,131 @@ onUnmounted(() => {
   justify-content: space-between;
   font-size: 10px;
   color: var(--text-muted);
-  margin-bottom: 6px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 7px;
 }
 
-.quota-numbers {
-  font-weight: 600;
-  color: var(--text-primary);
-}
+.quota-numbers { color: var(--text-primary); }
 
 .quota-track {
-  height: 4px;
-  background: var(--bg-base);
+  height: 3px;
+  background: var(--bg-overlay);
   border-radius: 999px;
   overflow: hidden;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .quota-fill {
   height: 100%;
-  background: var(--accent-cyan);
-  transition: width 0.3s;
+  background: var(--text-primary);
+  border-radius: 999px;
+  transition: width 600ms var(--ease-spring);
 }
 
-.quota-topup-link {
-  font-size: 10px;
-  color: var(--accent-cyan);
-  text-decoration: none;
-  font-weight: 600;
-  display: inline-block;
-}
-.quota-topup-link:hover {
-  text-decoration: underline;
-}
+.quota-topup-link { font-size: 11px; color: var(--text-secondary); font-weight: 500; }
+.quota-topup-link:hover { color: var(--text-primary); }
 
-.dropdown-divider {
-  height: 1px;
-  background: var(--border-subtle);
-  margin: 6px 0;
-}
+.dropdown-divider { height: 1px; background: var(--border-subtle); margin: 8px 0; }
 
-.dropdown-links {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
+.dropdown-links { display: flex; flex-direction: column; gap: 1px; }
 
 .dropdown-link {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 7px 10px;
-  border-radius: var(--radius-xs);
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
   color: var(--text-secondary);
-  text-decoration: none;
-  font-size: 12px;
-  transition: all var(--duration-fast);
-}
-.dropdown-link:hover {
-  color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.05);
+  font-size: 13px;
+  transition: all var(--duration-fast) var(--ease-out);
 }
 
-.admin-link {
-  color: #38bdf8;
-}
-
-.dropdown-footer {
-  padding-top: 4px;
-}
+.dropdown-link:hover { color: var(--text-primary); background: rgba(255, 255, 255, 0.06); }
 
 .logout-btn {
   width: 100%;
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 7px 10px;
-  border-radius: var(--radius-xs);
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
   background: transparent;
   border: none;
   color: var(--status-crimson);
-  font-size: 12px;
+  font-family: var(--font-sans);
+  font-size: 13px;
   cursor: pointer;
-  font-family: inherit;
-}
-.logout-btn:hover {
-  background: rgba(244, 63, 94, 0.1);
+  transition: background var(--duration-fast) var(--ease-out);
 }
 
-/* Badge colors */
-.badge-plan-free {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--text-muted);
-}
-.badge-plan-plus {
-  background: rgba(16, 185, 129, 0.15);
-  color: #10b981;
-}
-.badge-plan-pro {
-  background: rgba(0, 240, 255, 0.15);
-  color: #00f0ff;
-}
-.badge-plan-ultra {
-  background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(0, 240, 255, 0.2));
-  color: #c084fc;
-  border: 1px solid rgba(168, 85, 247, 0.4);
-}
+.logout-btn:hover { background: var(--status-crimson-dim); }
 
 /* Mobile */
 .mobile-menu-btn {
   display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
   background: transparent;
   border: none;
-  color: var(--text-secondary);
+  color: var(--text-primary);
   cursor: pointer;
+  border-radius: var(--radius-sm);
 }
+
+.mobile-menu-btn:hover { background: rgba(255, 255, 255, 0.06); }
 
 .mobile-drawer {
+  position: fixed;
+  inset: 58px 0 0 0;
+  z-index: 99;
   background: var(--bg-void);
-  border-bottom: 1px solid var(--border-regular);
-  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  justify-content: space-between;
+  padding: 32px 24px 32px;
+  overflow-y: auto;
 }
 
-.mobile-drawer-links {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
+.drawer-enter-active { transition: opacity 220ms var(--ease-out), transform 220ms var(--ease-out); }
+.drawer-leave-active { transition: opacity 160ms var(--ease-out), transform 160ms var(--ease-out); }
+.drawer-enter-from, .drawer-leave-to { opacity: 0; transform: translateY(-8px); }
+
+.drawer-enter-active .mobile-nav-link { transition: opacity 350ms var(--ease-spring), transform 350ms var(--ease-spring); }
+.drawer-enter-from .mobile-nav-link { opacity: 0; transform: translateY(12px); }
+
+.mobile-drawer-links { display: flex; flex-direction: column; }
 
 .mobile-nav-link {
-  color: var(--text-secondary);
-  text-decoration: none;
-  font-size: 14px;
-  padding: 6px 0;
-}
-.mobile-nav-link:hover {
-  color: var(--accent-cyan);
-}
-
-.drawer-divider {
-  height: 1px;
-  background: var(--border-subtle);
-  margin: 6px 0;
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  color: var(--text-primary);
+  font-size: 24px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  padding: 14px 0;
+  min-height: 52px;
+  border-bottom: 1px solid var(--border-faint);
 }
 
-@media (max-width: 860px) {
-  .nav-menu {
-    display: none;
-  }
-  .engine-badge {
-    display: none;
-  }
-  .mobile-menu-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
+.mobile-nav-link:active { color: var(--text-secondary); }
+
+.mobile-link-index {
+  font-size: 11px;
+  color: var(--text-faint);
+  font-weight: 400;
+}
+
+.drawer-divider { height: 20px; }
+
+.mobile-drawer-footer { display: flex; flex-direction: column; gap: 10px; }
+
+@media (max-width: 900px) {
+  .nav-menu { display: none; }
+  .profile-name { display: none; }
+  .mobile-menu-btn { display: flex; }
 }
 </style>

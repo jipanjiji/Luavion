@@ -8,19 +8,21 @@ export default defineEventHandler(async (event) => {
 
   const supabase = getSupabaseClient()
   if (supabase) {
-    const { data, error } = await supabase
-      .from('custom_presets')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
+    try {
+      const { data, error } = await supabase
+        .from('custom_presets')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
 
-    if (error) {
-      throw createError({ statusCode: 500, statusMessage: error.message })
-    }
-
-    return {
-      presets: data || [],
-      allowedLimit: planConfig.customPresetsLimit
+      if (!error && data) {
+        return {
+          presets: data,
+          allowedLimit: planConfig.customPresetsLimit
+        }
+      }
+    } catch (e) {
+      console.warn('custom_presets table not ready, using memory fallback')
     }
   }
 

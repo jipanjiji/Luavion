@@ -1,305 +1,298 @@
 <template>
   <div class="code-slider-card surface">
-    <!-- Header with sample selectors and mode indicator -->
+    <!-- Topbar -->
     <div class="slider-topbar">
       <div class="sample-tabs">
-        <span class="sample-label">SAMPLE SCRIPT:</span>
-        <button 
-          v-for="(sample, key) in samples" 
+        <span class="sample-label">SAMPLES:</span>
+        <button
+          v-for="(sample, key) in samples"
           :key="key"
           class="sample-tab-btn"
-          :class="{ 'active': activeSample === key }"
+          :class="{ active: activeSample === key }"
           @click="activeSample = key"
         >
           {{ sample.name }}
         </button>
       </div>
-
       <div class="slider-telemetry">
         <div class="telemetry-badge">
-          <span class="dot-indicator"></span>
-          <span>SPLIT {{ sliderPos }}%</span>
+          <span class="status-dot dot-cyan"></span>
+          <span>LUAVION V9.15 VM</span>
         </div>
-        <button class="btn btn-ghost btn-sm reset-btn" @click="sliderPos = 50" title="Reset split to 50%">
-          Center
-        </button>
+        <button class="btn btn-ghost btn-sm reset-btn" @click="sliderPos = 50">RESET</button>
       </div>
     </div>
 
-    <!-- Interactive Comparison Stage -->
-    <div 
-      class="slider-stage" 
+    <!-- Stage Area -->
+    <div
       ref="stageRef"
-      @mousedown="startDrag"
-      @touchstart="startDrag"
+      class="slider-stage"
+      @mousedown="onDragStart"
+      @touchstart.passive="onDragStart"
     >
-      <!-- Base Layer: Obfuscated Luavion Bytecode (Revealed on Right) -->
-      <div class="slider-pane pane-right">
-        <div class="pane-tag tag-obfuscated">
-          <span class="status-dot dot-cyan"></span>
-          <span>LUAVION V9.15 VIRTUAL MACHINE</span>
-          <span class="badge badge-cyan">PROTECTED</span>
-        </div>
-        <div class="code-container">
-          <div class="line-gutter">
-            <span v-for="n in rightLineCount" :key="n" class="gutter-num">{{ n }}</span>
-          </div>
-          <pre class="code-content"><code><span class="syntax-comment">--[[ [ LUAVION V9.15 ] — High-Assurance Luau Register VM ]]</span>
-<span class="syntax-keyword">return</span>((<span class="syntax-keyword">function</span>(...)
-  <span class="syntax-keyword">local</span> _vAttest = Vector3.new(3, 4, 0).Magnitude <span class="syntax-comment">-- Geometric Attestation</span>
-  <span class="syntax-keyword">local</span> _seed = math.floor(_vAttest * 1000) % 16777141
-  <span class="syntax-keyword">local</span> _lookup = {[140]=getmetatable, [55]=(buffer <span class="syntax-keyword">and</span> buffer.create <span class="syntax-keyword">or</span> table.create)}
-  <span class="syntax-keyword">local</span> <span class="syntax-func">_GaloisDispatch</span> = (<span class="syntax-keyword">function</span>(Ji, gi, ui, ai, Ti, yi, hi, bi, wi, mi)
-    <span class="syntax-keyword">for</span> dA = 1, #Ji, 1 <span class="syntax-keyword">do</span>
-      <span class="syntax-keyword">local</span> nA = Ji[dA]; <span class="syntax-keyword">local</span> IA = nA[1]; <span class="syntax-keyword">local</span> pA = nA[2];
-      <span class="syntax-keyword">if</span> IA == 13 <span class="syntax-keyword">then</span>
-        si[pA] = wi(Ni, Ti, ((oA + GA * 256)) + 1)
-      <span class="syntax-keyword">elseif</span> IA == 12 <span class="syntax-keyword">and</span> DA == ii <span class="syntax-keyword">then</span>
-        di(gi, ui, ai, pA, wi(ii, yi, BA))
-      <span class="syntax-keyword">elseif</span> IA == 2 <span class="syntax-keyword">then</span>
-        si[pA] = si[oA][si[GA]]
-      <span class="syntax-keyword">elseif</span> IA == 4 <span class="syntax-keyword">then</span>
-        wi(Li, pA, oA, GA, gi, ui, ai, bi, eA)
-      <span class="syntax-keyword">end</span>
-    <span class="syntax-keyword">end</span>
-  <span class="syntax-keyword">end</span>)
-  <span class="syntax-keyword">return</span> (ri(ei))(Xi, ci, ji, <span class="syntax-keyword">false</span>, ...);
-<span class="syntax-keyword">end</span>))(...);</code></pre>
-        </div>
-      </div>
-
-      <!-- Top Clipped Layer: Raw Vulnerable Source (Revealed on Left) -->
-      <div 
-        class="slider-pane pane-left" 
-        :style="{ clipPath: `inset(0 ${100 - sliderPos}% 0 0)` }"
-      >
+      <!-- Raw Source Pane (Left) -->
+      <div class="slider-pane pane-left" :style="{ clipPath: `inset(0 ${100 - sliderPos}% 0 0)` }">
         <div class="pane-tag tag-raw">
-          <span class="status-dot dot-amber"></span>
-          <span>RAW LUAU SOURCE</span>
-          <span class="badge badge-amber">VULNERABLE AST</span>
+          <span>// ORIGINAL RAW AST</span>
+          <span>{{ leftLineCount }} LINES</span>
         </div>
         <div class="code-container">
           <div class="line-gutter">
             <span v-for="n in leftLineCount" :key="n" class="gutter-num">{{ n }}</span>
           </div>
-          <pre class="code-content"><code v-html="currentSample.highlightedHtml"></code></pre>
+          <pre class="code-content"><code v-html="currentSample.highlightedRaw"></code></pre>
         </div>
       </div>
 
-      <!-- Draggable Split Divider Line & Thumb -->
-      <div 
-        class="slider-divider" 
-        :style="{ left: `${sliderPos}%` }"
-        :class="{ 'dragging': isDragging }"
-      >
+      <!-- Obfuscated Pane (Right) — real engine output -->
+      <div class="slider-pane pane-right">
+        <div class="pane-tag tag-obfuscated">
+          <span>// PROTECTED VM BYTECODE</span>
+          <span>{{ rightLineCount.toLocaleString() }} LINES</span>
+        </div>
+        <div class="code-container code-container-wrap">
+          <pre v-if="rightHighlighted" class="code-content code-content-wrap"><code v-html="rightHighlighted"></code></pre>
+          <pre v-else class="code-content"><code class="syntax-comment">// compiling sample…</code></pre>
+        </div>
+      </div>
+
+      <!-- Draggable Divider -->
+      <div class="slider-divider" :style="{ left: `${sliderPos}%` }" :class="{ dragging: isDragging }">
         <div class="divider-line"></div>
-        <div class="slider-handle" title="Drag to compare before & after">
+        <div class="slider-handle">
           <div class="handle-inner">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <polyline points="15 18 9 12 15 6"></polyline>
+            <div class="handle-grip-dots">
+              <span></span><span></span><span></span>
+            </div>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="8 7 3 12 8 17"></polyline>
+              <polyline points="16 7 21 12 16 17"></polyline>
             </svg>
             <div class="handle-grip-dots">
-              <span></span>
-              <span></span>
+              <span></span><span></span><span></span>
             </div>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <polyline points="9 18 15 12 9 6"></polyline>
-            </svg>
           </div>
-          <div class="handle-badge">
-            <span>DRAG</span>
-          </div>
+          <div class="handle-badge">COMPARE</div>
         </div>
       </div>
     </div>
 
-    <!-- Bottom Controls & Hints -->
+    <!-- Bottombar -->
     <div class="slider-bottombar">
       <div class="slider-hint">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"></circle>
-          <line x1="12" y1="16" x2="12" y2="12"></line>
-          <line x1="12" y1="8" x2="12.01" y2="8"></line>
-        </svg>
-        <span>Drag the slider handle to contrast original AST vs. decentralized VM bytecode.</span>
+        <kbd class="kbd">←</kbd>
+        <kbd class="kbd">→</kbd>
+        <span>or drag to compare</span>
       </div>
-
-      <div class="slider-actions">
-        <NuxtLink to="/app" class="btn btn-accent btn-sm">
-          <span>Test in Studio</span>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-            <polyline points="12 5 19 12 12 19"></polyline>
-          </svg>
-        </NuxtLink>
+      <div class="telemetry-badge">
+        <span class="dot-indicator"></span>
+        <span>ANTI-DUMP</span>
+      </div>
+      <div class="telemetry-badge">
+        <span class="dot-indicator"></span>
+        <span>ZERO STATIC STRINGS</span>
+      </div>
+      <div class="telemetry-badge">
+        <span class="dot-indicator"></span>
+        <span>MUTABLE VM</span>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import demoOutputs from '~/assets/data/demo-outputs.json'
 
 const stageRef = ref(null)
-const sliderPos = ref(48) // Percentage (0-100)
+const sliderPos = ref(50)
 const isDragging = ref(false)
 const activeSample = ref('auth')
 
-const samples = {
-  auth: {
-    name: 'Auth & License Key',
-    rawCode: `local HttpService = game:GetService("HttpService")
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
+const rightOutputs = ref({})
+const rightHighlighted = ref('')
 
-local function verifyLicense(authKey)
-    local secretHash = "9d8e7c6b5a4f3e2d1c0b9a8"
-    if authKey == secretHash then
-        print("[Luavion] Authorized access for user: " .. LocalPlayer.Name)
-        return true
-    else
-        LocalPlayer:Kick("Invalid License Key")
-        return false
-    end
+// ---------------------------------------------------------------------------
+// Lua syntax highlighter (client-side, no deps)
+// ---------------------------------------------------------------------------
+const LUA_KEYWORDS = new Set([
+  'local','function','end','if','then','else','elseif','while','do','for','in',
+  'repeat','until','return','break','goto','and','or','not','true','false','nil'
+])
+
+function esc(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+function highlightLua(code) {
+  // token-based single pass: comments, strings, numbers, keywords, calls
+  const token = /(--\[\[[\s\S]*?\]\]|--[^\n]*)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\[\[[\s\S]*?\]\])|(\b\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\b|0x[0-9a-fA-F]+)|(\b[A-Za-z_]\w*\b)/g
+  let out = ''
+  let last = 0
+  let m
+  while ((m = token.exec(code)) !== null) {
+    out += esc(code.slice(last, m.index))
+    if (m[1]) {
+      out += `<span class="syntax-comment">${esc(m[1])}</span>`
+    } else if (m[2]) {
+      out += `<span class="syntax-str">${esc(m[2])}</span>`
+    } else if (m[3]) {
+      out += `<span class="syntax-number">${esc(m[3])}</span>`
+    } else if (m[4]) {
+      const w = m[4]
+      if (LUA_KEYWORDS.has(w)) {
+        out += `<span class="syntax-keyword">${esc(w)}</span>`
+      } else if (code[m.index + w.length] === '(' || code[m.index + w.length] === '"' || code[m.index + w.length] === "'") {
+        out += `<span class="syntax-func">${esc(w)}</span>`
+      } else {
+        out += `<span class="syntax-id">${esc(w)}</span>`
+      }
+    }
+    last = m.index + m[0].length
+  }
+  out += esc(code.slice(last))
+  return out
+}
+
+// ---------------------------------------------------------------------------
+// Samples — raw sources are real; obfuscated panes load real engine output
+// generated offline with seed 1337, BALANCED preset, LuaU target.
+// ---------------------------------------------------------------------------
+const RAW_SOURCES = {
+  auth: {
+    name: 'Auth System',
+    rawCode: `--@title: Auth System
+local AuthService = {}
+local HttpService = game:GetService("HttpService")
+
+function AuthService:VerifyKey(user, key)
+  if not key or key == "" then return false end
+  local payload = HttpService:JSONEncode({
+    user = user.Name,
+    key = key,
+    timestamp = os.time()
+  })
+  return #key == 32 and key:sub(1,4) == "LUA_"
 end
 
-verifyLicense("9d8e7c6b5a4f3e2d1c0b9a8")`,
-    highlightedHtml: `<span class="syntax-keyword">local</span> HttpService = game:<span class="syntax-func">GetService</span>(<span class="syntax-str">"HttpService"</span>)
-<span class="syntax-keyword">local</span> Players = game:<span class="syntax-func">GetService</span>(<span class="syntax-str">"Players"</span>)
-<span class="syntax-keyword">local</span> LocalPlayer = Players.LocalPlayer
-
-<span class="syntax-keyword">local function</span> <span class="syntax-func">verifyLicense</span>(authKey)
-    <span class="syntax-keyword">local</span> secretHash = <span class="syntax-str">"9d8e7c6b5a4f3e2d1c0b9a8"</span>
-    <span class="syntax-keyword">if</span> authKey == secretHash <span class="syntax-keyword">then</span>
-        print(<span class="syntax-str">"[Luavion] Authorized access for user: "</span> .. LocalPlayer.Name)
-        <span class="syntax-keyword">return true</span>
-    <span class="syntax-keyword">else</span>
-        LocalPlayer:<span class="syntax-func">Kick</span>(<span class="syntax-str">"Invalid License Key"</span>)
-        <span class="syntax-keyword">return false</span>
-    <span class="syntax-keyword">end</span>
-<span class="syntax-keyword">end</span>
-
-<span class="syntax-func">verifyLicense</span>(<span class="syntax-str">"9d8e7c6b5a4f3e2d1c0b9a8"</span>)`
+return AuthService`
   },
   combat: {
-    name: 'Combat Autofarm Loop',
-    rawCode: `local Workspace = game:GetService("Workspace")
-local RunService = game:GetService("RunService")
-local Enemies = Workspace:WaitForChild("Enemies")
+    name: 'Combat Loop',
+    rawCode: `--@title: Combat Loop
+local player = game.Players.LocalPlayer
 
-local function getClosestTarget(range)
-    local closest, maxDist = nil, range or 50
-    for _, mob in ipairs(Enemies:GetChildren()) do
-        local root = mob:FindFirstChild("HumanoidRootPart")
-        if root then
-            local dist = (root.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
-            if dist < maxDist then
-                closest, maxDist = mob, dist
-            end
-        end
+function killAura(range)
+  for _, enemy in pairs(workspace.Enemies:GetChildren()) do
+    if (enemy.HumanoidRootPart.Position - player.Character.HumanoidRootPart.Position).Magnitude <= range then
+      enemy.Humanoid.Health = 0
     end
-    return closest
-end`,
-    highlightedHtml: `<span class="syntax-keyword">local</span> Workspace = game:<span class="syntax-func">GetService</span>(<span class="syntax-str">"Workspace"</span>)
-<span class="syntax-keyword">local</span> RunService = game:<span class="syntax-func">GetService</span>(<span class="syntax-str">"RunService"</span>)
-<span class="syntax-keyword">local</span> Enemies = Workspace:<span class="syntax-func">WaitForChild</span>(<span class="syntax-str">"Enemies"</span>)
+  end
+end
 
-<span class="syntax-keyword">local function</span> <span class="syntax-func">getClosestTarget</span>(range)
-    <span class="syntax-keyword">local</span> closest, maxDist = <span class="syntax-keyword">nil</span>, range <span class="syntax-keyword">or</span> <span class="syntax-number">50</span>
-    <span class="syntax-keyword">for</span> _, mob <span class="syntax-keyword">in</span> <span class="syntax-func">ipairs</span>(Enemies:<span class="syntax-func">GetChildren</span>()) <span class="syntax-keyword">do</span>
-        <span class="syntax-keyword">local</span> root = mob:<span class="syntax-func">FindFirstChild</span>(<span class="syntax-str">"HumanoidRootPart"</span>)
-        <span class="syntax-keyword">if</span> root <span class="syntax-keyword">then</span>
-            <span class="syntax-keyword">local</span> dist = (root.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
-            <span class="syntax-keyword">if</span> dist &lt; maxDist <span class="syntax-keyword">then</span>
-                closest, maxDist = mob, dist
-            <span class="syntax-keyword">end</span>
-        <span class="syntax-keyword">end</span>
-    <span class="syntax-keyword">end</span>
-    <span class="syntax-keyword">return</span> closest
-<span class="syntax-keyword">end</span>`
+while true do
+  killAura(10)
+  task.wait(0.5)
+end`
   },
-  rayfield: {
-    name: 'Rayfield / Fluent GUI Hook',
-    rawCode: `local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+  gui: {
+    name: 'Rayfield Hub',
+    rawCode: `--@title: Rayfield Hub
+local Rayfield = loadstring(game:HttpGet("https://raw.githubusercontent.com/SiriusSoftware/rayfield/main/source.lua"))()
+
 local Window = Rayfield:CreateWindow({
-    Name = "Luavion Secure Hub v9.15",
-    LoadingTitle = "Decrypting Galois Keystream...",
-    ConfigurationSaving = { Enabled = true, FolderName = "LuavionCfg" }
+  Name = "Luavion Hub v9.15",
+  LoadingTitle = "Loading Luavion Hub...",
+  ConfigurationSaving = { Enabled = false }
 })
-local Tab = Window:CreateTab("Automation", 4483362458)
-Tab:CreateToggle({
-    Name = "Infinite Jump & Noclip",
-    CurrentValue = false,
-    Callback = function(Value)
-        print("Toggled Noclip: ", Value)
-    end
-})`,
-    highlightedHtml: `<span class="syntax-keyword">local</span> Rayfield = <span class="syntax-func">loadstring</span>(game:<span class="syntax-func">HttpGet</span>(<span class="syntax-str">'https://sirius.menu/rayfield'</span>))()
-<span class="syntax-keyword">local</span> Window = Rayfield:<span class="syntax-func">CreateWindow</span>({
-    Name = <span class="syntax-str">"Luavion Secure Hub v9.15"</span>,
-    LoadingTitle = <span class="syntax-str">"Decrypting Galois Keystream..."</span>,
-    ConfigurationSaving = { Enabled = <span class="syntax-keyword">true</span>, FolderName = <span class="syntax-str">"LuavionCfg"</span> }
-})
-<span class="syntax-keyword">local</span> Tab = Window:<span class="syntax-func">CreateTab</span>(<span class="syntax-str">"Automation"</span>, <span class="syntax-number">4483362458</span>)
-Tab:<span class="syntax-func">CreateToggle</span>({
-    Name = <span class="syntax-str">"Infinite Jump &amp; Noclip"</span>,
-    CurrentValue = <span class="syntax-keyword">false</span>,
-    Callback = <span class="syntax-keyword">function</span>(Value)
-        print(<span class="syntax-str">"Toggled Noclip: "</span>, Value)
-    <span class="syntax-keyword">end</span>
-})`
+
+Rayfield:Notify({ Title = "Success", Content = "Script loaded securely" })
+Window:CreateTab("Main")`
   }
 }
 
-const currentSample = computed(() => samples[activeSample.value])
+const samples = computed(() => {
+  const map = {}
+  for (const [key, s] of Object.entries(RAW_SOURCES)) {
+    map[key] = { ...s, highlightedRaw: highlightLua(s.rawCode) }
+  }
+  return map
+})
+
+const currentSample = computed(() => samples.value[activeSample.value])
+
+// Real obfuscated output for the active sample
+watch(activeSample, (key) => {
+  rightHighlighted.value = ''
+  const raw = rightOutputs.value[key]
+  if (raw) {
+    rightHighlighted.value = highlightLua(raw)
+  }
+}, { immediate: true })
+
+onMounted(() => {
+  rightOutputs.value = demoOutputs
+  rightHighlighted.value = highlightLua(demoOutputs[activeSample.value] || '')
+  window.addEventListener('mousemove', onDragMove)
+  window.addEventListener('mouseup', onDragEnd)
+  window.addEventListener('touchmove', onDragMove, { passive: false })
+  window.addEventListener('touchend', onDragEnd)
+  window.addEventListener('keydown', onKeyDown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('mousemove', onDragMove)
+  window.removeEventListener('mouseup', onDragEnd)
+  window.removeEventListener('touchmove', onDragMove)
+  window.removeEventListener('touchend', onDragEnd)
+  window.removeEventListener('keydown', onKeyDown)
+})
+
 const leftLineCount = computed(() => currentSample.value.rawCode.split('\n').length)
-const rightLineCount = computed(() => 21)
+const rightLineCount = computed(() => {
+  const raw = rightOutputs.value[activeSample.value] || ''
+  return raw ? raw.split('\n').length : 0
+})
 
 const updatePosFromEvent = (e) => {
   if (!stageRef.value) return
   const rect = stageRef.value.getBoundingClientRect()
   const clientX = e.touches ? e.touches[0].clientX : e.clientX
-  const relativeX = clientX - rect.left
-  let percentage = (relativeX / rect.width) * 100
-  percentage = Math.max(8, Math.min(92, percentage))
-  sliderPos.value = Math.round(percentage * 10) / 10
+  let percentage = ((clientX - rect.left) / rect.width) * 100
+  percentage = Math.max(2, Math.min(98, percentage))
+  sliderPos.value = percentage
 }
 
-const startDrag = (e) => {
+const onDragStart = (e) => {
   isDragging.value = true
   updatePosFromEvent(e)
-  window.addEventListener('mousemove', onDrag)
-  window.addEventListener('touchmove', onDrag, { passive: false })
-  window.addEventListener('mouseup', stopDrag)
-  window.addEventListener('touchend', stopDrag)
 }
 
-const onDrag = (e) => {
+const onDragMove = (e) => {
   if (!isDragging.value) return
   if (e.cancelable) e.preventDefault()
   updatePosFromEvent(e)
 }
 
-const stopDrag = () => {
+const onDragEnd = () => {
   isDragging.value = false
-  window.removeEventListener('mousemove', onDrag)
-  window.removeEventListener('touchmove', onDrag)
-  window.removeEventListener('mouseup', stopDrag)
-  window.removeEventListener('touchend', stopDrag)
 }
 
-onUnmounted(() => {
-  stopDrag()
-})
+const onKeyDown = (e) => {
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+    const delta = e.key === 'ArrowLeft' ? -2 : 2
+    sliderPos.value = Math.max(2, Math.min(98, sliderPos.value + delta))
+  }
+}
 </script>
 
 <style scoped>
 .code-slider-card {
   overflow: hidden;
   border-radius: var(--radius-lg);
-  border: 1px solid var(--border-subtle);
-  background: var(--bg-surface);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6), var(--surface-highlight);
+  border: 1px solid var(--border-regular);
+  background: #0c0c0e;
+  box-shadow: var(--surface-highlight), var(--shadow-lg);
 }
 
 /* Topbar */
@@ -307,8 +300,8 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 18px;
-  background: var(--bg-surface-raised);
+  padding: 10px 16px;
+  background: var(--bg-surface);
   border-bottom: 1px solid var(--border-subtle);
   flex-wrap: wrap;
   gap: 12px;
@@ -317,40 +310,41 @@ onUnmounted(() => {
 .sample-tabs {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   flex-wrap: wrap;
 }
 
 .sample-label {
+  font-family: var(--font-mono);
   font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+  margin-right: 6px;
 }
 
 .sample-tab-btn {
   font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 500;
-  padding: 4px 10px;
+  padding: 5px 11px;
   border-radius: var(--radius-xs);
   background: transparent;
-  color: var(--text-secondary);
+  color: var(--text-muted);
   border: 1px solid transparent;
   cursor: pointer;
-  transition: all var(--duration-fast);
+  transition: all var(--duration-fast) var(--ease-out);
 }
 
 .sample-tab-btn:hover {
-  color: #ffffff;
+  color: var(--text-primary);
   background: rgba(255, 255, 255, 0.05);
 }
 
 .sample-tab-btn.active {
   background: var(--bg-elevated);
-  color: var(--accent-cyan);
-  border-color: var(--accent-cyan-border);
-  box-shadow: 0 0 12px rgba(0, 240, 255, 0.12);
+  color: var(--text-primary);
+  border-color: var(--border-regular);
 }
 
 .slider-telemetry {
@@ -362,29 +356,29 @@ onUnmounted(() => {
 .telemetry-badge {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
+  font-family: var(--font-mono);
   font-size: 10px;
-  font-weight: 600;
-  padding: 3px 8px;
+  font-weight: 500;
+  padding: 4px 9px;
   border-radius: var(--radius-xs);
   background: var(--bg-elevated);
   border: 1px solid var(--border-subtle);
   color: var(--text-secondary);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
 }
 
 .dot-indicator {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: var(--accent-cyan);
-  box-shadow: 0 0 6px var(--accent-cyan);
+  background: var(--text-primary);
 }
 
 .reset-btn {
   font-size: 10px;
-  padding: 3px 7px;
-  height: auto;
+  padding: 3px 8px;
+  min-height: 26px;
 }
 
 /* Stage Area */
@@ -407,36 +401,29 @@ onUnmounted(() => {
   background: var(--bg-base);
 }
 
-.pane-right {
-  z-index: 1;
-  background: radial-gradient(circle at 80% 20%, rgba(0, 240, 255, 0.03), transparent 60%), var(--bg-base);
-}
+.pane-right { z-index: 1; }
 
 .pane-left {
   z-index: 2;
-  background: radial-gradient(circle at 20% 20%, rgba(245, 158, 11, 0.03), transparent 60%), var(--bg-base);
+  background: radial-gradient(circle at 20% 20%, rgba(251, 191, 36, 0.03), transparent 60%), var(--bg-base);
 }
 
 .pane-tag {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   padding: 8px 18px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
   border-bottom: 1px solid var(--border-faint);
-  background: rgba(14, 20, 34, 0.5);
-  backdrop-filter: blur(8px);
+  color: var(--text-muted);
 }
 
-.tag-raw {
-  color: var(--status-amber);
-}
-
-.tag-obfuscated {
-  color: var(--accent-cyan);
-}
+.tag-raw { color: var(--status-amber); }
+.tag-obfuscated { color: var(--text-primary); }
 
 .code-container {
   display: flex;
@@ -454,15 +441,13 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: flex-end;
   color: var(--text-faint);
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.25);
   border-right: 1px solid var(--border-faint);
   user-select: none;
+  flex-shrink: 0;
 }
 
-.gutter-num {
-  font-size: 11px;
-  height: 20.4px;
-}
+.gutter-num { font-size: 11px; height: 20.4px; }
 
 .code-content {
   flex: 1;
@@ -472,8 +457,16 @@ onUnmounted(() => {
   tab-size: 2;
 }
 
-.code-content code {
-  font-family: var(--font-mono);
+.code-content code { font-family: var(--font-mono); }
+
+/* Right pane: dense wrapped blob (no gutter, fills the frame) */
+.code-container-wrap { background: rgba(0, 0, 0, 0.18); }
+
+.code-content-wrap {
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+  color: var(--text-secondary);
 }
 
 /* Draggable Divider */
@@ -490,8 +483,8 @@ onUnmounted(() => {
 .divider-line {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, var(--accent-cyan), #ffffff 50%, var(--accent-cyan));
-  box-shadow: 0 0 12px var(--accent-cyan);
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.35);
 }
 
 .slider-handle {
@@ -502,28 +495,28 @@ onUnmounted(() => {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: var(--bg-surface-raised);
-  border: 1px solid var(--accent-cyan);
-  box-shadow: 0 0 20px rgba(0, 240, 255, 0.35), var(--surface-highlight);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-hover);
+  box-shadow: 0 0 24px rgba(255, 255, 255, 0.2), var(--surface-highlight);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: ew-resize;
   pointer-events: auto;
-  transition: transform var(--duration-fast), box-shadow var(--duration-fast);
+  transition: transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
 }
 
 .slider-divider.dragging .slider-handle,
 .slider-handle:hover {
-  transform: translate(-50%, -50%) scale(1.1);
-  box-shadow: 0 0 28px rgba(0, 240, 255, 0.55);
+  transform: translate(-50%, -50%) scale(1.08);
+  box-shadow: 0 0 32px rgba(255, 255, 255, 0.35);
 }
 
 .handle-inner {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--accent-cyan);
+  color: var(--text-primary);
 }
 
 .handle-grip-dots {
@@ -542,15 +535,16 @@ onUnmounted(() => {
 
 .handle-badge {
   position: absolute;
-  bottom: -22px;
+  bottom: -24px;
+  font-family: var(--font-mono);
   font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  color: var(--accent-cyan);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
   background: var(--bg-void);
-  padding: 1px 5px;
+  padding: 2px 6px;
   border-radius: 3px;
-  border: 1px solid var(--accent-cyan-border);
+  border: 1px solid var(--border-subtle);
 }
 
 /* Bottombar */
@@ -558,8 +552,8 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 18px;
-  background: var(--bg-surface-raised);
+  padding: 10px 16px;
+  background: var(--bg-surface);
   border-top: 1px solid var(--border-subtle);
   flex-wrap: wrap;
   gap: 10px;
@@ -574,19 +568,9 @@ onUnmounted(() => {
 }
 
 @media (max-width: 768px) {
-  .slider-stage {
-    height: 380px;
-  }
-  .line-gutter {
-    width: 34px;
-    padding: 12px 4px;
-  }
-  .code-content {
-    padding: 12px 14px;
-    font-size: 11px;
-  }
-  .slider-hint span {
-    display: none;
-  }
+  .slider-stage { height: 380px; }
+  .line-gutter { width: 34px; padding: 12px 4px; }
+  .code-content { padding: 12px 14px; font-size: 11px; }
+  .slider-hint span { display: none; }
 }
 </style>

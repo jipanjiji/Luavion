@@ -120,7 +120,7 @@ useHead({
   align-items: center;
   gap: 8px;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--status-emerald);
   letter-spacing: 0.08em;
   margin-bottom: 8px;
@@ -128,7 +128,7 @@ useHead({
 
 .status-title {
   font-size: 32px;
-  font-weight: 700;
+  font-weight: 600;
   color: #ffffff;
   margin-bottom: 8px;
   letter-spacing: -0.02em;
@@ -160,7 +160,7 @@ useHead({
 
 .overall-text {
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 600;
   color: #ffffff;
 }
 
@@ -194,7 +194,7 @@ useHead({
 
 .service-name {
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
   color: #ffffff;
 }
 

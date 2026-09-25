@@ -1,6 +1,6 @@
 <template>
   <div class="settings-page">
-    <div class="container settings-container">
+    <div class="settings-container">
       <div class="settings-header">
         <div class="settings-tag">
           <span class="status-dot dot-cyan"></span>
@@ -15,10 +15,12 @@
         <h2 class="card-section-title">Google Account Profile</h2>
         <div class="profile-row">
           <img 
-            v-if="user?.avatarUrl" 
+            v-if="user?.avatarUrl && !avatarError" 
             :src="user.avatarUrl" 
             :alt="user.displayName" 
             class="profile-avatar"
+            referrerpolicy="no-referrer"
+            @error="avatarError = true"
           />
           <div v-else class="avatar-fallback">
             {{ (user?.displayName || 'U')[0].toUpperCase() }}
@@ -31,8 +33,8 @@
         </div>
       </div>
 
-      <!-- Developer Testing Sandbox Card -->
-      <div class="surface settings-card sandbox-card">
+      <!-- Developer Testing Sandbox Card (Admin Only) -->
+      <div v-if="user?.role === 'admin'" class="surface settings-card sandbox-card">
         <div class="sandbox-card-header">
           <div>
             <h2 class="card-section-title">Developer Sandbox & Plan Switcher</h2>
@@ -131,11 +133,13 @@
 </template>
 
 <script setup>
+definePageMeta({ layout: 'dashboard' })
 import { ref } from 'vue'
 import { useUser } from '~/composables/useUser'
 
 const { user, switchPlan, logout, showToast } = useUser()
 const showDeleteModal = ref(false)
+const avatarError = ref(false)
 
 useHead({
   title: 'Settings | Luavion Account',
@@ -162,8 +166,9 @@ const executeDeleteAccount = async () => {
 
 <style scoped>
 .settings-page {
-  padding: 48px 0 96px;
-  min-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 
 .settings-header {
@@ -175,7 +180,7 @@ const executeDeleteAccount = async () => {
   align-items: center;
   gap: 8px;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--accent-cyan);
   letter-spacing: 0.08em;
   margin-bottom: 8px;
@@ -183,7 +188,7 @@ const executeDeleteAccount = async () => {
 
 .settings-title {
   font-size: 26px;
-  font-weight: 700;
+  font-weight: 600;
   color: #ffffff;
   letter-spacing: -0.02em;
   margin-bottom: 6px;
@@ -203,7 +208,7 @@ const executeDeleteAccount = async () => {
 
 .card-section-title {
   font-size: 15px;
-  font-weight: 700;
+  font-weight: 600;
   color: #ffffff;
   margin-bottom: 8px;
 }
@@ -237,7 +242,7 @@ const executeDeleteAccount = async () => {
   background: var(--accent-cyan-dim);
   color: var(--accent-cyan);
   font-size: 18px;
-  font-weight: 700;
+  font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -295,7 +300,7 @@ const executeDeleteAccount = async () => {
 
 .control-label {
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.06em;
   color: var(--text-muted);
   min-width: 140px;

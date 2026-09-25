@@ -1,30 +1,21 @@
 <template>
   <div class="app-root">
-    <!-- Top Global Sticky Navbar -->
-    <AppHeader />
-
-    <!-- Main Page Content With Transition -->
-    <main class="app-main">
-      <NuxtPage />
-    </main>
-
-    <!-- Global Engineered Footer -->
-    <AppFooter />
-
-    <!-- Global Plan Upgrade Modal -->
+    <NuxtLayout>
+      <NuxtPage :transition="{ name: 'page', mode: 'out-in' }" />
+    </NuxtLayout>
     <PlanUpgradeModal />
-
-    <!-- Global Toast Notifications -->
     <AppToast />
+    <div class="bg-grid-overlay"></div>
   </div>
 </template>
 
 <script setup>
 import { onMounted, onUnmounted } from 'vue'
+import AppToast from '~/components/AppToast.vue'
+import PlanUpgradeModal from '~/components/PlanUpgradeModal.vue'
 
 const router = useRouter()
 
-// Global keyboard shortcut: Cmd+K / Ctrl+K jumps to Studio / Home
 const handleKeyDown = (e) => {
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
     e.preventDefault()
@@ -45,18 +36,16 @@ onUnmounted(() => {
 })
 </script>
 
-<style scoped>
+<style>
 .app-root {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: var(--bg-void);
   position: relative;
 }
 
-.app-main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+.app-root > .bg-grid-overlay {
+  position: fixed;
+  z-index: -1;
 }
 </style>

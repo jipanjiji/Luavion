@@ -84,7 +84,7 @@ useHead({
 
 .legal-title {
   font-size: 32px;
-  font-weight: 700;
+  font-weight: 600;
   color: #ffffff;
   margin: 12px 0 6px;
   letter-spacing: -0.02em;
@@ -106,7 +106,7 @@ useHead({
 
 .legal-section h2 {
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 600;
   color: #ffffff;
   margin-bottom: 10px;
 }

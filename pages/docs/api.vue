@@ -436,7 +436,7 @@ useHead({
   align-items: center;
   gap: 8px;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--accent-cyan);
   letter-spacing: 0.08em;
   margin-bottom: 12px;
@@ -444,7 +444,7 @@ useHead({
 
 .docs-title {
   font-size: 32px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.02em;
   color: #ffffff;
   margin-bottom: 12px;
@@ -481,7 +481,7 @@ useHead({
 .callout-title {
   display: block;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
   color: #ffffff;
   letter-spacing: 0.04em;
 }
@@ -492,9 +492,9 @@ useHead({
 }
 
 .btn-ultra {
-  background: linear-gradient(135deg, #a855f7, #00f0ff);
+  background: linear-gradient(135deg, #a855f7, var(--accent));
   color: var(--bg-void);
-  font-weight: 700;
+  font-weight: 600;
   border: none;
 }
 
@@ -522,7 +522,7 @@ useHead({
 
 .sidebar-heading {
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.08em;
   color: var(--text-muted);
   margin-bottom: 4px;
@@ -544,14 +544,14 @@ useHead({
 
 .method-tag {
   font-size: 9px;
-  font-weight: 700;
+  font-weight: 600;
   padding: 2px 5px;
   border-radius: 3px;
   letter-spacing: 0.04em;
 }
 
 .method-tag.post {
-  background: rgba(0, 240, 255, 0.15);
+  background: rgba(255,255,255,0.12);
   color: var(--accent-cyan);
 }
 
@@ -574,14 +574,14 @@ useHead({
 
 .card-heading {
   font-size: 18px;
-  font-weight: 700;
+  font-weight: 600;
   color: #ffffff;
   margin-bottom: 12px;
 }
 
 .sub-heading {
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
   color: #ffffff;
   margin: 20px 0 10px;
   letter-spacing: 0.02em;
@@ -617,7 +617,7 @@ useHead({
 
 .endpoint-path {
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 600;
   color: #ffffff;
 }
 
@@ -638,7 +638,7 @@ useHead({
 
 .code-lang {
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.06em;
   color: var(--text-muted);
 }
@@ -675,7 +675,7 @@ useHead({
 .params-table th {
   background: var(--bg-surface-raised);
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-muted);
   letter-spacing: 0.05em;
 }
@@ -686,7 +686,7 @@ useHead({
 
 .param-status {
   color: #fbbf24;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 /* Lang Tabs */

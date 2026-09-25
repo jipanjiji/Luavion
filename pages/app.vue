@@ -1,379 +1,258 @@
 <template>
   <div class="studio-page">
-    <div class="container studio-container">
-      <!-- Studio Header / Config Toolbar -->
-      <div class="surface studio-toolbar">
-        <div class="toolbar-section toolbar-presets">
-          <div class="toolbar-label-group">
-            <span class="toolbar-label">SECURITY PRESET</span>
-            <span class="preset-meta-info" v-if="activePresetObj">
-              {{ activePresetObj.security }} Tier • {{ activePresetObj.vmProfile }} VM
-            </span>
-          </div>
+    <div class="studio-container">
 
-          <div class="preset-pills-row">
-            <button 
-              v-for="p in presets" 
-              :key="p.id"
-              class="preset-pill-btn"
-              :class="{ 
-                'active': selectedPreset === p.id,
-                'locked': isPresetLocked(p.id)
-              }"
-              @click="handleSelectPreset(p)"
-              :title="isPresetLocked(p.id) ? `Locked on ${userPlan.toUpperCase()} plan. Click to unlock.` : p.desc"
-            >
-              <span class="pill-name">
-                <svg v-if="isPresetLocked(p.id)" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="lock-icon">
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                </svg>
-                {{ p.name }}
-              </span>
-              <span v-if="p.badge" class="pill-sub" :class="p.id === 'BALANCED' ? 'sub-cyan' : isPresetLocked(p.id) ? 'sub-amber' : 'sub-muted'">
-                {{ isPresetLocked(p.id) ? 'Locked' : p.badge }}
-              </span>
-            </button>
-          </div>
+      <!-- Command bar -->
+      <header class="studio-head anim-fade-up">
+        <div class="studio-title-group">
+          <h1 class="studio-title">Studio</h1>
+          <p class="studio-sub">Virtualize Luau &amp; Lua 5.1 scripts with the Galois register engine.</p>
         </div>
-
-        <div class="toolbar-divider"></div>
-
-        <div class="toolbar-section toolbar-options">
-          <!-- Target VM Switcher -->
-          <div class="config-group">
-            <span class="toolbar-label">TARGET RUNTIME</span>
-            <div class="segmented-control">
-              <button 
-                class="seg-btn" 
-                :class="{ 'active': luaVersion === 'LuaU' }"
-                @click="luaVersion = 'LuaU'"
-              >
-                Luau
-              </button>
-              <button 
-                class="seg-btn" 
-                :class="{ 'active': luaVersion === 'Lua51' }"
-                @click="luaVersion = 'Lua51'"
-              >
-                Lua 5.1
-              </button>
-            </div>
-          </div>
-
-          <!-- Stegano AI Prompt Shield Status -->
-          <div class="config-group">
-            <span class="toolbar-label">AI PROMPT SHIELD</span>
-            <div class="shield-indicator" title="Zero-width unicode directives prevent automated LLM deobfuscation">
-              <span class="status-dot dot-emerald"></span>
-              <span class="shield-label">STEGANO ON</span>
-            </div>
-          </div>
-
-          <!-- Watermark Banner Switch -->
-          <div class="config-group">
-            <span class="toolbar-label">WATERMARK</span>
-            <div class="watermark-tag" title="PRD 6.1: Official watermark comment is embedded in all outputs">
-              <span class="status-dot dot-cyan"></span>
-              <span>INCLUDED</span>
-            </div>
-          </div>
-
-          <!-- Batch Obfuscator Modal Trigger -->
-          <div class="config-group">
-            <span class="toolbar-label">BATCH</span>
-            <button 
-              class="btn-batch-trigger"
-              :class="{ 'batch-locked': !hasBatchAccess }"
-              @click="handleOpenBatch"
-              :title="hasBatchAccess ? `Batch compile up to ${userPlan === 'ultra' ? '100' : '10'} files` : 'Batch compilation requires Pro or Ultra'"
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
-                <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
-              </svg>
-              <span>Batch ({{ userPlan === 'ultra' ? '100x' : userPlan === 'pro' ? '10x' : 'Pro' }})</span>
-              <svg v-if="!hasBatchAccess" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-              </svg>
-            </button>
-          </div>
-
-          <!-- Custom Presets Trigger -->
-          <div class="config-group">
-            <span class="toolbar-label">SAVED PRESETS</span>
-            <button 
-              class="btn-batch-trigger"
-              @click="handleOpenCustomPresets"
-              title="Manage custom configurations"
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-              </svg>
-              <span>Presets</span>
-            </button>
-          </div>
-
-          <!-- Deterministic Seed with Auto-Refresh -->
-          <div class="config-group">
-            <div class="seed-label-row">
-              <span class="toolbar-label">SEED</span>
-              <span v-if="seedJustRefreshed" class="seed-refreshed-badge">Refreshed!</span>
-            </div>
-            <div class="seed-control" :class="{ 'refreshed-glow': seedJustRefreshed }">
-              <input 
-                type="number" 
-                v-model.number="seed" 
-                class="seed-input" 
-                placeholder="Random"
-                title="Compilation entropy seed"
-              />
-              <button 
-                class="seed-refresh-btn" 
-                @click="randomizeSeedManual" 
-                title="Randomize compiler seed"
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                  <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
-                </svg>
-              </button>
-            </div>
-          </div>
+        <div class="studio-head-actions">
+          <button class="btn btn-ghost btn-sm" @click="handleOpenCustomPresets">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M20 7h-9" /><path d="M14 17H5" /><circle cx="17" cy="17" r="3" /><circle cx="7" cy="7" r="3" />
+            </svg>
+            Presets
+          </button>
+          <button class="btn btn-secondary btn-sm" @click="handleOpenBatch">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+            </svg>
+            Batch
+          </button>
         </div>
-      </div>
+      </header>
 
-      <!-- Syntax Diagnostic / Error Banner -->
-      <SyntaxErrorBanner 
-        v-if="syntaxError || errorMessage"
-        :syntax-error="syntaxError"
-        :error-message="errorMessage"
-        @close="clearError"
-      />
-
-      <!-- Quota / File Size Warning Banner -->
-      <div v-if="isFileSizeExceeded" class="file-size-warning surface-raised">
-        <span class="warn-icon">⚠️</span>
-        <span class="warn-msg">
-          Current script size ({{ (inputByteCount / 1024).toFixed(1) }} KB) exceeds your {{ userPlan.toUpperCase() }} plan limit of {{ userPlanConfig.maxFileSizeLabel }}.
-        </span>
-        <button class="btn btn-accent btn-xs" @click="promptUpgrade('pro', 'Upgrade to increase your maximum file size up to 1 MB (Pro) or 5 MB (Ultra).')">
-          Upgrade Capacity
+      <!-- Preset strip -->
+      <div class="preset-strip anim-fade-up" style="animation-delay: 60ms" role="radiogroup" aria-label="Obfuscation preset">
+        <button
+          v-for="p in presets"
+          :key="p.id"
+          class="preset-pill"
+          :class="{ selected: selectedPreset === p.id, locked: isPresetLocked(p.id) }"
+          role="radio"
+          :aria-checked="selectedPreset === p.id"
+          @click="handleSelectPreset(p)"
+        >
+          <span class="pill-name">{{ p.name }}</span>
+          <span v-if="isPresetLocked(p.id)" class="pill-lock" aria-label="Locked">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+          </span>
+          <span v-else-if="p.badge" class="pill-badge mono">{{ p.badge }}</span>
         </button>
       </div>
 
-      <!-- Dual Pane Studio Workspace -->
-      <div class="editor-workspace">
-        <!-- Left Pane: Source Input -->
-        <div 
-          class="surface editor-card"
+      <p class="preset-desc mono anim-fade-up" style="animation-delay: 100ms">
+        <span class="preset-desc-id">{{ selectedPreset }}</span>
+        {{ activePresetObj?.desc }}
+        <span class="preset-desc-sep">·</span> security {{ activePresetObj?.security }}
+      </p>
+
+      <!-- Engine controls -->
+      <div class="engine-controls anim-fade-up" style="animation-delay: 140ms">
+        <div class="controls-left">
+          <div class="segmented-control" role="group" aria-label="Target runtime">
+            <button class="seg-btn mono" :class="{ active: luaVersion === 'LuaU' }" @click="luaVersion = 'LuaU'">Luau</button>
+            <button class="seg-btn mono" :class="{ active: luaVersion === 'Lua51' }" @click="luaVersion = 'Lua51'">Lua 5.1</button>
+          </div>
+
+          <div class="seed-chip mono">
+            <span class="seed-label">seed</span>
+            <span class="seed-val">{{ seed }}</span>
+            <button class="seed-refresh" :class="{ spun: seedJustRefreshed }" @click="randomizeSeedManual" aria-label="Randomize seed">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M21 12a9 9 0 1 1-2.64-6.36" /><polyline points="21 3 21 9 15 9" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <button
+          class="btn btn-primary btn-lg run-btn"
+          :disabled="isObfuscating || !sourceCode.trim() || isFileSizeExceeded"
+          @click="runObfuscation"
+        >
+          <span v-if="isObfuscating" class="spinner" aria-hidden="true"></span>
+          <span>{{ isObfuscating ? `Virtualizing… ${elapsedTime}s` : 'Obfuscate' }}</span>
+        </button>
+      </div>
+
+      <!-- Error banner -->
+      <div v-if="errorMessage || syntaxError" class="error-banner" role="alert">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+        </svg>
+        <div class="error-body">
+          <strong>{{ syntaxError ? 'Syntax error' : 'Compilation failed' }}</strong>
+          <span class="mono error-msg">{{ errorMessage }}</span>
+          <span v-if="syntaxError" class="mono error-loc">line {{ syntaxError.line }} · col {{ syntaxError.column }}</span>
+        </div>
+        <button class="error-dismiss" @click="clearError" aria-label="Dismiss error">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Editor workspace -->
+      <div class="studio-workspace anim-fade-up" style="animation-delay: 180ms">
+        <!-- Input pane -->
+        <div
+          class="editor-pane terminal-frame"
           :class="{ 'drag-over': isDragging }"
           @dragover.prevent="isDragging = true"
           @dragleave.prevent="isDragging = false"
           @drop.prevent="handleFileDrop"
         >
-          <div class="pane-header">
-            <div class="pane-meta">
-              <div class="pane-title-badge">
-                <span class="status-dot dot-amber"></span>
-                <span class="pane-name">INPUT SOURCE</span>
-              </div>
-              <span class="telemetry-tag" :class="{ 'tag-warn': isFileSizeExceeded }">
-                {{ inputLineCount }} lines • {{ inputByteCount }} bytes 
-                <span v-if="isFileSizeExceeded"> (Exceeds {{ userPlanConfig.maxFileSizeLabel }})</span>
-              </span>
-            </div>
-
-            <div class="pane-controls">
-              <button class="btn btn-ghost btn-sm" @click="loadSampleScript" title="Load sample script">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                  <polyline points="14 2 14 8 20 8"></polyline>
+          <div class="tf-header">
+            <span class="status-dot dot-cyan"></span>
+            <span>source.lua</span>
+            <span v-if="sourceCode" class="tf-meta mono">{{ inputLineCount }} lines · {{ (inputByteCount / 1024).toFixed(1) }} KB</span>
+            <div class="tf-actions">
+              <label class="tf-action-btn" title="Upload .lua file">
+                <input type="file" accept=".lua,.txt" class="sr-only" @change="handleFileSelect" />
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
                 </svg>
-                <span>Sample</span>
-              </button>
-
-              <label class="btn btn-ghost btn-sm file-label" title="Upload .lua or .luau file">
-                <input type="file" accept=".lua,.luau,.txt" @change="handleFileSelect" hidden />
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                  <polyline points="17 8 12 3 7 8"></polyline>
-                  <line x1="12" y1="3" x2="12" y2="15"></line>
-                </svg>
-                <span>Upload</span>
               </label>
-
-              <button class="btn btn-ghost btn-sm" @click="clearInput" :disabled="!sourceCode" title="Clear input">
-                <span>Clear</span>
+              <button class="tf-action-btn" @click="loadSampleScript" title="Load sample script">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
+                </svg>
+              </button>
+              <button v-if="sourceCode" class="tf-action-btn" @click="clearInput" title="Clear input">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                </svg>
               </button>
             </div>
           </div>
 
-          <!-- Code Input Area -->
           <div class="editor-body">
+            <div v-if="isDragging" class="drop-veil">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+              <span>Drop .lua file to load</span>
+            </div>
             <textarea
               v-model="sourceCode"
               class="code-textarea"
-              placeholder="-- Paste or write your Luau / Lua 5.1 script here...&#10;-- Or drag & drop a .lua / .luau file directly into this workspace."
+              placeholder="-- Paste your Luau / Lua 5.1 script here, or drop a .lua file"
               spellcheck="false"
+              aria-label="Source code input"
             ></textarea>
-
-            <!-- Drag & Drop Zone Overlay -->
-            <div v-if="isDragging" class="drag-drop-overlay">
-              <div class="drag-drop-card surface">
-                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" color="#00f0ff">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                  <polyline points="17 8 12 3 7 8"></polyline>
-                  <line x1="12" y1="3" x2="12" y2="15"></line>
-                </svg>
-                <span class="drop-text">Drop .lua or .luau file here to load</span>
-              </div>
-            </div>
           </div>
 
-          <!-- Action Footer -->
-          <div class="pane-footer">
-            <button 
-              class="btn btn-accent btn-obfuscate" 
-              :disabled="!sourceCode.trim() || isObfuscating || isFileSizeExceeded"
-              @click="runObfuscation"
-            >
-              <template v-if="isObfuscating">
-                <span class="spinner"></span>
-                <span>Compiling VM ({{ elapsedTime }}s)...</span>
-              </template>
-              <template v-else>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-                </svg>
-                <span>Obfuscate Script</span>
-              </template>
-            </button>
+          <div class="editor-foot">
+            <span v-if="isFileSizeExceeded" class="foot-warn mono">
+              exceeds {{ userPlanConfig.maxFileSizeLabel }} plan limit — upgrade to compile
+            </span>
+            <span v-else class="foot-hint mono">LuaU + Lua 5.1 · {{ userPlanConfig.maxFileSizeLabel }} max</span>
           </div>
         </div>
 
-        <!-- Right Pane: Protected Output -->
-        <div 
-          class="surface editor-card"
-          :class="{ 'compiling-active': isObfuscating }"
-        >
-          <div class="pane-header">
-            <div class="pane-meta">
-              <div class="pane-title-badge">
-                <span class="status-dot dot-cyan"></span>
-                <span class="pane-name">VIRTUALIZED PAYLOAD</span>
-              </div>
-              <span v-if="outputCode" class="telemetry-tag">
-                {{ outputLineCount }} lines • {{ outputByteCount }} bytes
-                <span v-if="executionStats"> • {{ executionStats.durationMs }}ms</span>
-              </span>
-              <span v-else class="telemetry-tag text-muted">Awaiting compiler job</span>
-            </div>
-
-            <div class="pane-controls" v-if="outputCode">
-              <button class="btn btn-ghost btn-sm" @click="copyOutput" title="Copy code to clipboard">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+        <!-- Output pane -->
+        <div class="editor-pane terminal-frame">
+          <div class="tf-header">
+            <span class="status-dot" :class="outputCode ? 'dot-emerald' : ''" :style="outputCode ? '' : 'background: var(--bg-overlay)'"></span>
+            <span>protected.lua</span>
+            <span v-if="outputCode" class="tf-meta mono">
+              {{ outputLineCount }} lines · {{ (outputByteCount / 1024).toFixed(1) }} KB<span v-if="executionStats"> · {{ executionStats.durationMs }}ms</span>
+            </span>
+            <div class="tf-actions" v-if="outputCode">
+              <button class="tf-action-btn" @click="copyOutput" :title="copied ? 'Copied' : 'Copy to clipboard'">
+                <svg v-if="!copied" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
                 </svg>
-                <span>{{ copied ? 'Copied!' : 'Copy' }}</span>
+                <svg v-else width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color: var(--status-emerald)" aria-hidden="true">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
               </button>
-
-              <button class="btn btn-ghost btn-sm" @click="downloadOutput" title="Download protected file">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                  <polyline points="7 10 12 15 17 10"></polyline>
-                  <line x1="12" y1="15" x2="12" y2="3"></line>
+              <button class="tf-action-btn" @click="downloadOutput" title="Download protected file">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
                 </svg>
-                <span>Download</span>
               </button>
             </div>
           </div>
 
-          <!-- Code Output Area -->
           <div class="editor-body">
-            <!-- Active Compilation Progress Overlay -->
             <div v-if="isObfuscating" class="compiling-overlay">
-              <div class="compiling-box surface">
+              <div class="compiling-box">
                 <div class="compiling-spinner-ring"></div>
                 <span class="compiling-title">Synthesizing Galois Register VM</span>
-                <span class="compiling-step-sub">{{ activeCompilationStep }}</span>
+                <span class="compiling-step-sub mono">{{ activeCompilationStep }}</span>
                 <div class="compiling-bar-track">
                   <div class="compiling-bar-pulse"></div>
                 </div>
               </div>
             </div>
-
             <textarea
               v-model="outputCode"
               class="code-textarea output-textarea"
-              placeholder="-- The virtualized bytecode payload will appear here after obfuscation..."
+              placeholder="-- Virtualized bytecode appears here after obfuscation"
               readonly
               spellcheck="false"
+              aria-label="Obfuscated output"
             ></textarea>
           </div>
 
-          <!-- Output Telemetry Footer -->
-          <div class="pane-footer output-footer">
-            <div class="footer-telemetry" v-if="executionStats">
-              <div class="telemetry-chip">
-                <span class="chip-label">EXPANSION</span>
-                <span class="chip-val">{{ executionStats.expansionRatio }}x</span>
-              </div>
-              <div class="telemetry-chip">
-                <span class="chip-label">LATENCY</span>
-                <span class="chip-val">{{ executionStats.durationMs }}ms</span>
-              </div>
-              <div class="telemetry-chip">
-                <span class="chip-label">SEED</span>
-                <span class="chip-val">{{ executionStats.seed }}</span>
-              </div>
+          <div class="editor-foot">
+            <div class="foot-stats mono" v-if="executionStats">
+              <span>expansion <strong>{{ executionStats.expansionRatio }}x</strong></span>
+              <span>latency <strong>{{ executionStats.durationMs }}ms</strong></span>
+              <span>seed <strong>{{ executionStats.seed }}</strong></span>
             </div>
-            <div v-else class="footer-telemetry-placeholder">
-              <span>Ready for compilation</span>
-            </div>
-
-            <button 
-              v-if="pipelineLogs.length" 
-              class="btn btn-ghost btn-xs logs-toggle"
+            <span v-else class="foot-hint mono">ready for compilation</span>
+            <button
+              v-if="pipelineLogs.length"
+              class="foot-logs-btn mono"
               @click="showLogs = !showLogs"
-            >
-              <span>{{ showLogs ? 'Hide Logs' : `Logs (${pipelineLogs.length})` }}</span>
+            >{{ showLogs ? 'hide logs' : `logs (${pipelineLogs.length})` }}</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pipeline logs drawer -->
+      <transition name="logs">
+        <div v-if="showLogs && pipelineLogs.length" class="terminal-frame logs-drawer">
+          <div class="tf-header">
+            <span>compiler pipeline logs</span>
+            <button class="tf-action-btn" style="margin-left: auto" @click="showLogs = false" aria-label="Close logs">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
             </button>
           </div>
-        </div>
-      </div>
-
-      <!-- Pipeline Logs Drawer -->
-      <div v-if="showLogs && pipelineLogs.length" class="surface logs-drawer">
-        <div class="logs-header">
-          <span class="logs-title">COMPILER PIPELINE EXECUTION LOGS</span>
-          <button class="btn btn-ghost btn-xs" @click="showLogs = false">Close</button>
-        </div>
-        <div class="logs-body">
-          <div 
-            v-for="(log, i) in pipelineLogs" 
-            :key="i"
-            class="log-line"
-            :class="`log-${log.level || 'info'}`"
-          >
-            <span class="log-level">[{{ (log.level || 'info').toUpperCase() }}]</span>
-            <span class="log-msg">{{ log.message }}</span>
+          <div class="logs-body">
+            <div v-for="(log, i) in pipelineLogs" :key="i" class="log-line mono" :class="`log-${log.level || 'info'}`">
+              <span class="log-level">[{{ (log.level || 'info').toUpperCase() }}]</span>
+              <span class="log-msg">{{ log.message }}</span>
+            </div>
           </div>
         </div>
+      </transition>
+
+      <!-- Mobile sticky action bar -->
+      <div class="mobile-run-bar">
+        <button
+          class="btn btn-primary btn-lg mobile-run-btn"
+          :disabled="isObfuscating || !sourceCode.trim() || isFileSizeExceeded"
+          @click="runObfuscation"
+        >
+          <span v-if="isObfuscating" class="spinner" aria-hidden="true"></span>
+          {{ isObfuscating ? `Virtualizing… ${elapsedTime}s` : 'Obfuscate' }}
+        </button>
       </div>
 
-      <!-- Batch Obfuscator Modal Component -->
       <BatchObfuscatorModal v-model="showBatchModal" />
-
-      <!-- Custom Presets Modal Component -->
-      <CustomPresetModal 
+      <CustomPresetModal
         v-model="showCustomPresetsModal"
-        :current-settings="{
-          preset: selectedPreset,
-          luaVersion,
-          includeBanner
-        }"
+        :current-settings="{ preset: selectedPreset, luaVersion, includeBanner }"
         @apply="onApplyCustomPreset"
       />
     </div>
@@ -381,6 +260,8 @@
 </template>
 
 <script setup>
+definePageMeta({ layout: 'dashboard' })
+
 import { ref, computed, onMounted } from 'vue'
 import { useUser } from '~/composables/useUser'
 import { usePlans } from '~/composables/usePlans'
@@ -700,517 +581,430 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.studio-page {
-  padding: 24px 0 64px;
-}
+.studio-page { padding: 0 0 120px; }
 
-.studio-container {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-/* Config Toolbar */
-.studio-toolbar {
-  border: 1px solid var(--border-regular);
-  border-radius: var(--radius-md);
-  padding: 16px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  background: var(--bg-surface);
-}
-
-.toolbar-section {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 20px;
-}
-
-.toolbar-presets {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 10px;
-  width: 100%;
-}
-
-.toolbar-label-group {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.toolbar-label {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: var(--text-muted);
-}
-
-.preset-meta-info {
-  font-size: 11px;
-  color: var(--accent-cyan);
-}
-
-.preset-pills-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.preset-pill-btn {
-  background: var(--bg-surface-raised);
-  border: 1px solid var(--border-regular);
-  padding: 6px 12px;
-  border-radius: var(--radius-xs);
-  color: var(--text-primary);
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  transition: all var(--duration-fast);
-}
-.preset-pill-btn:hover {
-  border-color: var(--border-hover);
-}
-.preset-pill-btn.active {
-  background: var(--bg-elevated);
-  border-color: var(--accent-cyan);
-  box-shadow: 0 0 16px rgba(0, 240, 255, 0.15);
-}
-
-.preset-pill-btn.locked {
-  opacity: 0.7;
-}
-
-.lock-icon {
-  color: var(--status-amber);
-}
-
-.pill-sub {
-  font-size: 9px;
-  font-weight: 700;
-  padding: 1px 4px;
-  border-radius: 2px;
-}
-.sub-cyan { background: rgba(0, 240, 255, 0.15); color: var(--accent-cyan); }
-.sub-amber { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
-.sub-muted { background: rgba(255, 255, 255, 0.06); color: var(--text-muted); }
-
-.toolbar-divider {
-  height: 1px;
-  background: var(--border-subtle);
-  width: 100%;
-}
-
-.toolbar-options {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  flex-wrap: wrap;
-}
-
-.config-group {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.shield-indicator,
-.watermark-tag {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--bg-surface-raised);
-  border: 1px solid var(--border-subtle);
-  padding: 4px 8px;
-  border-radius: var(--radius-xs);
-  font-size: 10px;
-  font-weight: 600;
-}
-
-.btn-batch-trigger {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--bg-surface-raised);
-  border: 1px solid var(--border-regular);
-  color: var(--text-primary);
-  font-family: inherit;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 4px 10px;
-  border-radius: var(--radius-xs);
-  cursor: pointer;
-  transition: all var(--duration-fast);
-}
-.btn-batch-trigger:hover {
-  border-color: var(--accent-cyan);
-}
-.btn-batch-trigger.batch-locked {
-  color: var(--text-secondary);
-}
-
-/* Seed Input */
-.seed-label-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.seed-refreshed-badge {
-  font-size: 9px;
-  color: var(--status-emerald);
-  font-weight: 700;
-}
-
-.seed-control {
-  display: flex;
-  align-items: center;
-  background: var(--bg-surface-raised);
-  border: 1px solid var(--border-regular);
-  border-radius: var(--radius-xs);
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  clip-path: inset(50%);
   overflow: hidden;
 }
 
-.seed-input {
-  width: 75px;
-  background: transparent;
-  border: none;
-  color: var(--text-primary);
-  font-family: inherit;
-  font-size: 11px;
-  padding: 4px 8px;
-}
-.seed-input:focus {
-  outline: none;
-}
-
-.seed-refresh-btn {
-  background: transparent;
-  border: none;
-  border-left: 1px solid var(--border-subtle);
-  color: var(--text-muted);
-  padding: 4px 6px;
-  cursor: pointer;
+/* ---------- Head ---------- */
+.studio-head {
   display: flex;
-  align-items: center;
-}
-.seed-refresh-btn:hover {
-  color: var(--text-primary);
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
 }
 
-/* File Size Warning */
-.file-size-warning {
+.studio-title {
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+.studio-sub { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+
+.studio-head-actions { display: flex; gap: 8px; }
+
+/* ---------- Preset strip ---------- */
+.preset-strip {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+
+.preset-strip::-webkit-scrollbar { display: none; }
+
+.preset-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border-radius: var(--radius-full);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--duration-fast) var(--ease-out);
+  min-height: 40px;
+}
+
+.preset-pill:hover { border-color: var(--border-hover); color: var(--text-primary); }
+
+.preset-pill.selected {
+  background: var(--text-primary);
+  border-color: var(--text-primary);
+  color: var(--text-inverse);
+}
+
+.preset-pill.locked { opacity: 0.5; }
+
+.pill-badge, .pill-lock { font-size: 9px; }
+
+.preset-pill.selected .pill-badge { color: var(--text-inverse); opacity: 0.7; }
+
+.pill-badge { color: var(--text-faint); letter-spacing: 0.06em; }
+
+.pill-lock { display: inline-flex; color: var(--text-faint); }
+
+.preset-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: 12px 2px 18px;
+  letter-spacing: 0.01em;
+}
+
+.preset-desc-id { color: var(--text-primary); font-weight: 600; margin-right: 8px; }
+
+.preset-desc-sep { margin: 0 6px; color: var(--text-faint); }
+
+/* ---------- Engine controls ---------- */
+.engine-controls {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 16px;
-  background: rgba(245, 158, 11, 0.1);
-  border: 1px solid rgba(245, 158, 11, 0.3);
+  gap: 16px;
+  padding: 14px 16px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.controls-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+.segmented-control {
+  display: inline-flex;
+  gap: 2px;
+  background: var(--bg-base);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
-  font-size: 12px;
-  color: #fbbf24;
+  padding: 2px;
 }
 
-.warn-msg {
-  flex: 1;
-  margin: 0 12px;
+.seg-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 6px 13px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+  min-height: 30px;
 }
 
-/* Editor Workspace */
-.editor-workspace {
+.seg-btn.active { background: var(--bg-elevated); color: var(--text-primary); }
+
+.seed-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px 7px 13px;
+  background: var(--bg-base);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  min-height: 34px;
+}
+
+.seed-label { color: var(--text-faint); }
+
+.seed-val { color: var(--text-primary); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.seed-refresh {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.seed-refresh:hover { color: var(--text-primary); background: var(--bg-overlay); }
+
+.seed-refresh.spun svg { animation: spin 600ms var(--ease-out); }
+
+.run-btn { min-width: 190px; }
+
+.run-btn .kbd { border-color: rgba(0, 0, 0, 0.2); background: rgba(0, 0, 0, 0.12); color: rgba(0, 0, 0, 0.55); }
+
+/* ---------- Error ---------- */
+.error-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  margin-bottom: 18px;
+  background: var(--status-crimson-dim);
+  border: 1px solid var(--status-crimson-border);
+  border-radius: var(--radius-md);
+  color: var(--status-crimson);
+  animation: fadeUp 250ms var(--ease-spring);
+}
+
+.error-body { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+
+.error-body strong { font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; }
+
+.error-msg { font-size: 12px; color: var(--text-secondary); word-break: break-word; }
+
+.error-loc { font-size: 11px; color: var(--text-faint); }
+
+.error-dismiss {
+  background: transparent;
+  border: none;
+  color: var(--status-crimson);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: var(--radius-xs);
+  flex-shrink: 0;
+}
+
+.error-dismiss:hover { background: rgba(248, 113, 113, 0.12); }
+
+/* ---------- Workspace ---------- */
+.studio-workspace {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
-  min-height: 580px;
+  align-items: stretch;
 }
 
-.editor-card {
-  border: 1px solid var(--border-regular);
-  border-radius: var(--radius-md);
+.editor-pane {
   display: flex;
   flex-direction: column;
-  background: var(--bg-surface);
-  position: relative;
-  overflow: hidden;
+  min-height: 520px;
+  transition: border-color var(--duration-normal) var(--ease-out);
 }
 
-.pane-header {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border-subtle);
-  display: flex;
-  justify-content: space-between;
+.editor-pane.drag-over { border-color: var(--border-focus); }
+
+.tf-header { display: flex; align-items: center; gap: 10px; }
+
+.tf-meta { color: var(--text-faint); margin-left: 4px; }
+
+.tf-actions { display: flex; gap: 2px; margin-left: auto; }
+
+.tf-action-btn {
+  display: inline-flex;
   align-items: center;
-  background: var(--bg-surface-raised);
-}
-
-.pane-meta {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.pane-title-badge {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.pane-name {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: #ffffff;
-}
-
-.telemetry-tag {
-  font-size: 10px;
-  color: var(--text-muted);
-}
-.tag-warn {
-  color: var(--status-amber);
-}
-
-.pane-controls {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.file-label {
-  cursor: pointer;
-}
-
-.editor-body {
-  flex: 1;
-  position: relative;
-  display: flex;
-  min-height: 480px;
-}
-
-.code-textarea {
-  width: 100%;
-  height: 100%;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
   background: transparent;
   border: none;
+  border-radius: var(--radius-xs);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.tf-action-btn:hover { color: var(--text-primary); background: var(--bg-overlay); }
+
+.editor-body { position: relative; flex: 1; display: flex; }
+
+.code-textarea {
+  flex: 1;
+  width: 100%;
+  resize: none;
+  border: none;
+  outline: none;
+  background: transparent;
   color: var(--text-primary);
   font-family: var(--font-mono);
-  font-size: 12px;
-  line-height: 1.6;
-  padding: 16px;
-  resize: none;
-  outline: none;
-  white-space: pre;
+  font-size: 12.5px;
+  line-height: 1.75;
+  padding: 16px 18px;
   tab-size: 2;
 }
 
-.output-textarea {
-  color: #cffafe;
-}
+.code-textarea::placeholder { color: var(--text-faint); }
 
-.drag-drop-overlay {
+.output-textarea { color: var(--text-secondary); }
+
+.drop-veil {
   position: absolute;
   inset: 0;
-  background: rgba(5, 8, 14, 0.9);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.drag-drop-card {
-  padding: 32px;
-  border-radius: var(--radius-md);
-  border: 2px dashed var(--accent-cyan);
+  z-index: 5;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  justify-content: center;
+  gap: 10px;
+  background: rgba(10, 10, 11, 0.85);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  backdrop-filter: blur(4px);
 }
 
-/* Compiling Progress Overlay */
+.editor-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border-faint);
+  min-height: 40px;
+}
+
+.foot-hint { font-size: 10px; color: var(--text-faint); letter-spacing: 0.04em; }
+
+.foot-warn { font-size: 10px; color: var(--status-amber); }
+
+.foot-stats { display: flex; gap: 16px; font-size: 10px; color: var(--text-faint); }
+
+.foot-stats strong { color: var(--text-secondary); font-weight: 600; }
+
+.foot-logs-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 10px;
+  cursor: pointer;
+  letter-spacing: 0.04em;
+}
+
+.foot-logs-btn:hover { color: var(--text-primary); }
+
+/* ---------- Compiling overlay ---------- */
 .compiling-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(5, 8, 14, 0.88);
-  backdrop-filter: blur(8px);
-  z-index: 10;
+  z-index: 6;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  background: rgba(10, 10, 11, 0.9);
+  backdrop-filter: blur(3px);
 }
 
 .compiling-box {
-  width: 100%;
-  max-width: 380px;
-  background: var(--bg-surface-raised);
-  border: 1px solid var(--border-regular);
-  border-radius: var(--radius-md);
-  padding: 24px;
-  text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+  gap: 14px;
+  text-align: center;
+  padding: 24px;
 }
 
 .compiling-spinner-ring {
-  width: 32px;
-  height: 32px;
-  border: 3px solid rgba(0, 240, 255, 0.15);
-  border-top-color: var(--accent-cyan);
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  margin-bottom: 14px;
+  border: 2px solid var(--border-regular);
+  border-top-color: var(--text-primary);
+  animation: spin 800ms linear infinite;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.compiling-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: #ffffff;
-  margin-bottom: 6px;
-}
+.compiling-title { font-size: 13px; font-weight: 600; color: var(--text-primary); }
 
 .compiling-step-sub {
-  font-size: 11px;
-  color: var(--accent-cyan);
-  margin-bottom: 14px;
-  min-height: 16px;
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+  transition: opacity var(--duration-fast);
 }
 
 .compiling-bar-track {
-  width: 100%;
-  height: 4px;
-  background: var(--bg-base);
+  width: 180px;
+  height: 2px;
   border-radius: 999px;
+  background: var(--bg-overlay);
   overflow: hidden;
-  position: relative;
 }
 
 .compiling-bar-pulse {
-  position: absolute;
-  top: 0;
-  bottom: 0;
   width: 40%;
-  background: linear-gradient(90deg, transparent, #00f0ff, transparent);
-  animation: pulseBar 1.2s infinite ease-in-out;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--text-primary);
+  animation: scan 1.2s var(--ease-out) infinite;
 }
 
-@keyframes pulseBar {
-  0% { left: -40%; }
-  100% { left: 100%; }
+@keyframes scan {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
 }
 
-.pane-footer {
-  padding: 12px 16px;
-  border-top: 1px solid var(--border-subtle);
-  background: var(--bg-surface-raised);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
+/* ---------- Logs drawer ---------- */
+.logs-drawer { margin-top: 16px; }
 
-.btn-obfuscate {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  font-weight: 600;
-}
-
-.output-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.footer-telemetry {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.telemetry-chip {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-}
-
-.chip-label {
-  font-size: 9px;
-  font-weight: 700;
-  color: var(--text-muted);
-}
-
-.chip-val {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--accent-cyan);
-}
-
-.footer-telemetry-placeholder {
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-/* Logs Drawer */
-.logs-drawer {
-  border: 1px solid var(--border-regular);
-  border-radius: var(--radius-md);
-  padding: 16px;
-  background: #04060a;
-}
-
-.logs-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-}
-
-.logs-title {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
-}
+.logs-enter-active, .logs-leave-active { transition: opacity var(--duration-normal) var(--ease-out), transform var(--duration-normal) var(--ease-out); }
+.logs-enter-from, .logs-leave-to { opacity: 0; transform: translateY(-6px); }
 
 .logs-body {
-  max-height: 180px;
+  max-height: 220px;
   overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  padding: 12px 16px;
 }
 
 .log-line {
+  display: flex;
+  gap: 10px;
   font-size: 11px;
-  line-height: 1.5;
+  padding: 3px 0;
+  line-height: 1.6;
 }
-.log-info { color: #94a3b8; }
-.log-warn { color: #fbbf24; }
-.log-error { color: #f43f5e; }
 
-.log-level {
-  font-weight: 700;
-  margin-right: 6px;
-}
+.log-level { color: var(--text-faint); flex-shrink: 0; width: 64px; }
+
+.log-msg { color: var(--text-secondary); }
+
+.log-warn .log-level, .log-warn .log-msg { color: var(--status-amber); }
+
+.log-error .log-level, .log-error .log-msg { color: var(--status-crimson); }
+
+/* ---------- Mobile ---------- */
+.mobile-run-bar { display: none; }
 
 @media (max-width: 900px) {
-  .editor-workspace {
-    grid-template-columns: 1fr;
+  .studio-page { padding: 24px 0 96px; }
+
+  .studio-head { flex-direction: column; align-items: flex-start; gap: 12px; }
+
+  .studio-sub { display: none; }
+
+  .studio-head-actions { width: 100%; }
+  .studio-head-actions .btn { flex: 1; }
+
+  .engine-controls { flex-direction: column; align-items: stretch; }
+
+  .run-btn { display: none; }
+
+  .studio-workspace { grid-template-columns: 1fr; }
+
+  .editor-pane { min-height: 380px; }
+
+  .mobile-run-bar {
+    display: block;
+    position: fixed;
+    left: 0; right: 0; bottom: 56px;
+    z-index: 80;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    background: rgba(10, 10, 11, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid var(--border-subtle);
   }
+
+  .mobile-run-btn { width: 100%; min-height: 48px; }
 }
 </style>

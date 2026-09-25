@@ -416,12 +416,12 @@ useHead({
 
 .card-featured {
   border-color: var(--accent-cyan-border);
-  box-shadow: 0 0 24px rgba(0, 240, 255, 0.1);
+  box-shadow: 0 0 24px rgba(255,255,255,0.08);
 }
 
 .card-ultra {
-  border-color: rgba(168, 85, 247, 0.4);
-  box-shadow: 0 0 24px rgba(168, 85, 247, 0.1);
+  border-color: var(--status-amber-border);
+  box-shadow: 0 0 24px rgba(251, 191, 36, 0.05);
 }
 
 .plan-badge-row {
@@ -438,9 +438,9 @@ useHead({
 }
 
 .badge-ultra {
-  background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(0, 240, 255, 0.2));
-  color: #c084fc;
-  border: 1px solid rgba(168, 85, 247, 0.4);
+  background: var(--status-amber-dim);
+  color: var(--status-amber);
+  border: 1px solid var(--status-amber-border);
 }
 
 .plan-price-row {
@@ -481,10 +481,14 @@ useHead({
 }
 
 .btn-ultra {
-  background: linear-gradient(135deg, #a855f7, #00f0ff);
-  color: var(--bg-void);
-  font-weight: 700;
-  border: none;
+  background: var(--accent);
+  color: var(--text-inverse);
+  font-weight: 600;
+  border-color: var(--accent);
+}
+.btn-ultra:hover {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
 }
 
 .features-label {
@@ -638,7 +642,7 @@ useHead({
 
 .highlight-col,
 .highlight-cell {
-  background: rgba(0, 240, 255, 0.03);
+  background: rgba(255,255,255,0.025);
 }
 
 .ultra-col,

@@ -1,25 +1,11 @@
 <template>
-  <transition name="modal">
-    <div v-if="show" class="modal-backdrop" @click.self="handleClose">
-      <div class="modal-card surface batch-modal">
-        <!-- Close Button -->
-        <button class="modal-close-btn" @click="handleClose" aria-label="Close modal">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
-
-        <div class="modal-header">
-          <div class="header-tag">
-            <span class="status-dot dot-cyan"></span>
-            <span>BATCH OBFUSCATION STUDIO</span>
-          </div>
-          <h2 class="modal-title">Bulk Script Compiler</h2>
-          <p class="modal-subtitle">
-            Upload multiple scripts for sequential client-orchestrated compilation. Max limit for your <strong>{{ userPlan.toUpperCase() }}</strong> plan: <strong>{{ maxAllowedFiles }} files</strong>.
-          </p>
-        </div>
+  <UiModal
+    :show="show"
+    title="Bulk script compiler"
+    :subtitle="`Upload multiple scripts for sequential client-orchestrated compilation. Max for your ${userPlan.toUpperCase()} plan: ${maxAllowedFiles} files.`"
+    max-width="680px"
+    @close="handleClose"
+  >
 
         <!-- Toolbar / Settings for Batch -->
         <div class="batch-toolbar surface-raised">
@@ -57,17 +43,6 @@
             </div>
           </div>
 
-          <div class="config-item">
-            <span class="config-label">WATERMARK</span>
-            <button 
-              class="toggle-btn"
-              :class="{ active: includeBanner }"
-              @click="includeBanner = !includeBanner"
-              :disabled="isProcessing"
-            >
-              {{ includeBanner ? 'Included' : 'Off' }}
-            </button>
-          </div>
         </div>
 
         <!-- Dropzone -->
@@ -166,8 +141,7 @@
           </div>
         </div>
 
-        <!-- Footer Actions -->
-        <div class="modal-footer">
+    <template #footer>
           <div class="footer-left">
             <span class="limit-indicator" v-if="filesQueue.length > maxAllowedFiles">
               ⚠️ Warning: You exceeded the {{ maxAllowedFiles }} files limit for your plan. Extra files will be skipped.
@@ -207,16 +181,15 @@
               <span>{{ isZipping ? 'Archiving...' : `Download ZIP (${completedCount})` }}</span>
             </button>
           </div>
-        </div>
-      </div>
-    </div>
-  </transition>
+    </template>
+  </UiModal>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import JSZip from 'jszip'
 import { useUser } from '~/composables/useUser'
+import UiModal from '~/components/ui/Modal.vue'
 
 const props = defineProps({
   modelValue: {
@@ -416,77 +389,6 @@ const downloadZipBundle = async () => {
 </script>
 
 <style scoped>
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(5, 8, 14, 0.85);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-}
-
-.batch-modal {
-  width: 100%;
-  max-width: 680px;
-  max-height: 85vh;
-  display: flex;
-  flex-direction: column;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-regular);
-  border-radius: var(--radius-lg);
-  padding: 28px;
-  position: relative;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
-}
-
-.modal-close-btn {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  background: var(--bg-surface-raised);
-  border: 1px solid var(--border-subtle);
-  color: var(--text-muted);
-  width: 30px;
-  height: 30px;
-  border-radius: var(--radius-xs);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-.modal-close-btn:hover {
-  color: var(--text-primary);
-  border-color: var(--border-hover);
-}
-
-.header-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--accent-cyan);
-  letter-spacing: 0.08em;
-  margin-bottom: 6px;
-}
-
-.modal-title {
-  font-size: 20px;
-  font-weight: 700;
-  color: #ffffff;
-  margin-bottom: 6px;
-}
-
-.modal-subtitle {
-  font-size: 12px;
-  color: var(--text-secondary);
-  line-height: 1.5;
-  margin-bottom: 18px;
-}
 
 .batch-toolbar {
   display: flex;
@@ -497,19 +399,6 @@ const downloadZipBundle = async () => {
   border: 1px solid var(--border-regular);
   margin-bottom: 18px;
   flex-wrap: wrap;
-}
-
-.config-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.config-label {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text-muted);
-  letter-spacing: 0.05em;
 }
 
 .batch-select {
@@ -536,12 +425,12 @@ const downloadZipBundle = async () => {
 }
 .batch-dropzone:hover,
 .batch-dropzone.drag-over {
-  border-color: var(--accent-cyan);
-  background: var(--accent-cyan-dimmer);
+  border-color: var(--border-hover);
+  background: var(--accent-dimmer);
 }
 
 .dropzone-icon {
-  color: var(--accent-cyan);
+  color: var(--text-secondary);
   margin-bottom: 12px;
 }
 
@@ -601,8 +490,9 @@ const downloadZipBundle = async () => {
 
 .progress-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, #00f0ff, #10b981);
-  transition: width 0.3s ease;
+  background: var(--text-primary);
+  border-radius: 999px;
+  transition: width 300ms var(--ease-out);
 }
 
 .progress-labels {
@@ -686,8 +576,8 @@ const downloadZipBundle = async () => {
 }
 
 .badge-processing {
-  background: rgba(0, 240, 255, 0.1);
-  color: var(--accent-cyan);
+  background: var(--accent-dim);
+  color: var(--text-primary);
 }
 
 .badge-completed {
@@ -710,12 +600,10 @@ const downloadZipBundle = async () => {
   color: var(--status-crimson);
 }
 
-.modal-footer {
+.footer-left {
+  margin-right: auto;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding-top: 14px;
-  border-top: 1px solid var(--border-subtle);
 }
 
 .limit-indicator {
@@ -729,8 +617,6 @@ const downloadZipBundle = async () => {
 }
 
 .btn-zip {
-  background: var(--status-emerald);
-  color: var(--bg-void);
-  font-weight: 600;
+  gap: 6px;
 }
 </style>
